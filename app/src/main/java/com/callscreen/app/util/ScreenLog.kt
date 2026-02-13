@@ -15,38 +15,46 @@ object ScreenLog {
     private val entries = mutableListOf<String>()
     private val dateFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
 
-    @Synchronized
+    /** Optional callback invoked (on the calling thread) whenever a new log line is added. */
+    var onChange: (() -> Unit)? = null
+
     fun d(tag: String, message: String) {
-        add("D", tag, message)
+        addEntry("D", tag, message)
         Timber.tag(tag).d(message)
     }
 
-    @Synchronized
     fun w(tag: String, message: String) {
-        add("W", tag, message)
+        addEntry("W", tag, message)
         Timber.tag(tag).w(message)
     }
 
-    @Synchronized
     fun e(tag: String, message: String, throwable: Throwable? = null) {
-        add("E", tag, "$message${throwable?.let { ": ${it.message}" } ?: ""}")
+        addEntry("E", tag, "$message${throwable?.let { ": ${it.message}" } ?: ""}")
         Timber.tag(tag).e(throwable, message)
     }
 
-    @Synchronized
-    private fun add(level: String, tag: String, message: String) {
-        val timestamp = dateFormat.format(Date())
-        entries.add("$timestamp $level/$tag: $message")
-        while (entries.size > MAX_ENTRIES) {
-            entries.removeAt(0)
+    private fun addEntry(level: String, tag: String, message: String) {
+        synchronized(this) {
+            val timestamp = dateFormat.format(Date())
+            entries.add("$timestamp $level/$tag: $message")
+            while (entries.size > MAX_ENTRIES) {
+                entries.removeAt(0)
+            }
         }
+        onChange?.invoke()
     }
 
     @Synchronized
     fun getLog(): String = entries.joinToString("\n")
 
+    /** Alias for [getLog] used by the Compose debug screen. */
     @Synchronized
+    fun getAll(): String = getLog()
+
     fun clear() {
-        entries.clear()
+        synchronized(this) {
+            entries.clear()
+        }
+        onChange?.invoke()
     }
 }

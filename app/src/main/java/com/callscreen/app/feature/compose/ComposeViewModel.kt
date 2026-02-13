@@ -276,6 +276,7 @@ class ComposeViewModel @Inject constructor(
                 val position = messages.indexOfFirst { it.id == selected } + 1
                 newState { copy(searchSelectionPosition = position, searchResults = messages.size) }
             }
+            Unit
         }.subscribe()
 
         val latestSubId = messages
@@ -520,6 +521,7 @@ class ComposeViewModel @Inject constructor(
                         message.parts.filter { !it.isSmil() }.mapNotNull { it.getUri() }
                     )
                 }
+                Unit
             }
             .autoDispose(view.scope())
             .subscribe { view.clearSelection() }
@@ -622,6 +624,7 @@ class ComposeViewModel @Inject constructor(
             .observeOn(Schedulers.io())
             .withLatestFrom(conversation, state) { _, conversation, state ->
                 conversationRepo.updateSendAsGroup(conversation.id, !state.sendAsGroup)
+                Unit
             }
             .autoDispose(view.scope())
             .subscribe()

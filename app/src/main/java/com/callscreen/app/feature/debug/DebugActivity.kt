@@ -53,7 +53,8 @@ class DebugActivity : QkThemedActivity() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menu ?: return super.onCreateOptionsMenu(menu)
         menu.add(0, MENU_COPY, 0, R.string.debug_copy)
         menu.add(0, MENU_CLEAR, 1, R.string.debug_clear)
         return true

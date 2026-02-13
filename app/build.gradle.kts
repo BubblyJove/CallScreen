@@ -131,6 +131,12 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
+    // PhotoView
+    implementation("com.github.chrisbanes:photoview:2.1.4")
+
+    // Flexbox
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
+
     // ExoPlayer
     implementation("com.google.android.exoplayer:exoplayer-core:2.19.1")
     implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")

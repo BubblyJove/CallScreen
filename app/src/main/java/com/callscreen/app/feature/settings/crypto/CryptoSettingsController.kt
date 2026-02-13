@@ -20,7 +20,7 @@ class CryptoSettingsController : Controller() {
 
     @Inject lateinit var cryptoRepository: CryptoRepository
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup, savedViewState: android.os.Bundle?): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View {
         appComponent.inject(this)
 
         val view = inflater.inflate(R.layout.controller_crypto_settings, container, false)

@@ -150,7 +150,7 @@ dependencies {
     implementation("org.web3j:core:4.10.3")
 
     // Realm Adapters
-    implementation("io.realm:android-adapters:4.0.0")
+    implementation("com.github.realm:realm-android-adapters:3.1.0")
 
     // ShortcutBadger
     implementation("me.leolin:ShortcutBadger:1.1.22")

@@ -50,11 +50,20 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-rx2:1.7.3")
 
+    // Coroutines reactive
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive:1.7.3")
+
     // AndroidX
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.work:work-rxjava2:2.9.0")
+
+    // JDK9 compat
+    implementation("com.github.pengrad:jdk9-deps:1ffe84c468")
+    implementation("javax.annotation:javax.annotation-api:1.3.2")
 
     // Glide
     implementation("com.github.bumptech.glide:glide:4.16.0")

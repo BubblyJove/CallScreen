@@ -98,6 +98,15 @@
             </intent-filter>
         </activity>
 
+        <!-- SMS send-result tracker -->
+        <receiver
+            android:name=".sms.SmsSentReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.callscreen.app.SMS_SENT" />
+            </intent-filter>
+        </receiver>
+
         <!-- Notification channel provider -->
         <meta-data
             android:name="com.callscreen.app.NOTIFICATION_CHANNEL"

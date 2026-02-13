@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.Settings
@@ -28,16 +29,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.callscreen.app.ui.screens.DebugLogScreen
 import com.callscreen.app.ui.screens.InboxScreen
 import com.callscreen.app.ui.screens.PendingScreen
 import com.callscreen.app.ui.screens.SettingsScreen
 import com.callscreen.app.ui.theme.CallScreenTheme
+import com.callscreen.app.util.ScreenLog
 
 class MainActivity : ComponentActivity() {
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { /* permissions granted or denied — UI will reflect state */ }
+    ) { results ->
+        // Log permission results for debugging
+        results.forEach { (perm, granted) ->
+            ScreenLog.d("Permissions", "${perm.substringAfterLast('.')}: $granted")
+        }
+    }
 
     private val defaultSmsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -49,6 +57,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Log startup info
+        ScreenLog.d("App", "MainActivity.onCreate — API ${Build.VERSION.SDK_INT} (${Build.MODEL})")
+        ScreenLog.d("App", "Package: $packageName")
+        ScreenLog.d("App", "Default SMS app: ${isDefaultSmsApp()}")
+        ScreenLog.d("App", "Call screener: ${isCallScreeningApp()}")
+        logPermissionState()
+
         requestPermissions()
 
         setContent {
@@ -77,6 +93,12 @@ class MainActivity : ComponentActivity() {
                                 selected = selectedTab == 2,
                                 onClick = { selectedTab = 2 }
                             )
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Filled.BugReport, contentDescription = "Debug") },
+                                label = { Text("Debug") },
+                                selected = selectedTab == 3,
+                                onClick = { selectedTab = 3 }
+                            )
                         }
                     }
                 ) { innerPadding ->
@@ -91,9 +113,25 @@ class MainActivity : ComponentActivity() {
                             viewModel = viewModel,
                             modifier = Modifier.padding(innerPadding)
                         )
+                        3 -> DebugLogScreen(Modifier.padding(innerPadding))
                     }
                 }
             }
+        }
+    }
+
+    private fun logPermissionState() {
+        val perms = listOf(
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_SMS,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.READ_CONTACTS
+        )
+        for (p in perms) {
+            val granted = ContextCompat.checkSelfPermission(this, p) == PackageManager.PERMISSION_GRANTED
+            ScreenLog.d("Permissions", "${p.substringAfterLast('.')}: $granted")
         }
     }
 
@@ -116,7 +154,10 @@ class MainActivity : ComponentActivity() {
             }
         }
         if (needed.isNotEmpty()) {
+            ScreenLog.d("Permissions", "Requesting: ${needed.map { it.substringAfterLast('.') }}")
             permissionLauncher.launch(needed.toTypedArray())
+        } else {
+            ScreenLog.d("Permissions", "All permissions already granted")
         }
     }
 

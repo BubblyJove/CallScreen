@@ -2,50 +2,54 @@ package com.callscreen.app.screening
 
 import android.telecom.Call
 import android.telecom.CallScreeningService
-import android.util.Log
 import com.callscreen.app.challenge.ChallengeManager
 import com.callscreen.app.data.AppDatabase
 import com.callscreen.app.data.PendingMessage
 import com.callscreen.app.data.MessageType
 import com.callscreen.app.util.PhoneNumberUtil
+import com.callscreen.app.util.ScreenLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
 class AppCallScreeningService : CallScreeningService() {
 
     override fun onScreenCall(callDetails: Call.Details) {
+        ScreenLog.d(TAG, "===== onScreenCall fired =====")
+
         val handle = callDetails.handle
+        ScreenLog.d(TAG, "handle=$handle")
+
         val number = handle?.schemeSpecificPart
+        ScreenLog.d(TAG, "schemeSpecificPart=$number")
 
         if (number.isNullOrBlank()) {
-            Log.w(TAG, "No caller number available — letting call through")
+            ScreenLog.w(TAG, "No caller number — letting call through")
             respondToCall(callDetails, CallResponse.Builder().build())
             return
         }
 
-        Log.d(TAG, "Screening call from $number")
+        ScreenLog.d(TAG, "Screening call from $number  (direction=${callDetails.callDirection})")
 
-        // Run everything synchronously on IO so the work finishes before the
-        // system destroys this service.  The total wall time is <200 ms
-        // (local DB queries + one SmsManager.sendTextMessage call).
         runBlocking(Dispatchers.IO) {
-            val challengeManager = ChallengeManager(applicationContext)
+            try {
+                val challengeManager = ChallengeManager(applicationContext)
 
-            if (challengeManager.isNumberTrusted(number)) {
-                Log.d(TAG, "Trusted number $number — allowing call")
-                respondToCall(callDetails, CallResponse.Builder().build())
-            } else {
-                Log.d(TAG, "Unknown number $number — rejecting and sending challenge")
-                val response = CallResponse.Builder()
-                    .setDisallowCall(true)
-                    .setRejectCall(true)
-                    .setSilenceCall(true)
-                    .setSkipNotification(false)
-                    .build()
+                if (challengeManager.isNumberTrusted(number)) {
+                    ScreenLog.d(TAG, "Trusted — allowing call from $number")
+                    respondToCall(callDetails, CallResponse.Builder().build())
+                } else {
+                    ScreenLog.d(TAG, "Untrusted — rejecting call from $number")
 
-                respondToCall(callDetails, response)
+                    val response = CallResponse.Builder()
+                        .setDisallowCall(true)
+                        .setRejectCall(true)
+                        .setSilenceCall(true)
+                        .setSkipNotification(false)
+                        .build()
 
-                try {
+                    respondToCall(callDetails, response)
+                    ScreenLog.d(TAG, "respondToCall done (rejected)")
+
                     val db = AppDatabase.getInstance(applicationContext)
                     db.pendingMessageDao().insert(
                         PendingMessage(
@@ -55,17 +59,20 @@ class AppCallScreeningService : CallScreeningService() {
                             isIncoming = true
                         )
                     )
-                    Log.d(TAG, "Logged screened call from $number")
+                    ScreenLog.d(TAG, "Logged screened call in DB")
 
                     challengeManager.sendChallenge(number, isCall = true)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to log/challenge $number", e)
+                    ScreenLog.d(TAG, "sendChallenge returned for $number")
                 }
+            } catch (e: Exception) {
+                ScreenLog.e(TAG, "EXCEPTION in onScreenCall for $number", e)
             }
         }
+
+        ScreenLog.d(TAG, "===== onScreenCall finished =====")
     }
 
     companion object {
-        private const val TAG = "CallScreenService"
+        private const val TAG = "CallScreen"
     }
 }

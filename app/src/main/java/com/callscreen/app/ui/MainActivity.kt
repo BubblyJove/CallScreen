@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
         ScreenLog.d("Roles", "Call screening result: ${result.resultCode}")
     }
 
+    @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)

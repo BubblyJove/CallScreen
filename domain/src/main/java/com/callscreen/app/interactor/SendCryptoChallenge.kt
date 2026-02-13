@@ -64,11 +64,12 @@ class SendCryptoChallenge @Inject constructor(
             append("Payment will be confirmed after 12 block confirmations.")
         }
 
-        messageRepository.sendMessage(
+        messageRepository.sendNewMessages(
             subId = -1,
-            threadId = 0L,
-            addresses = listOf(phoneNumber),
-            body = body
+            toAddresses = listOf(phoneNumber),
+            body = body,
+            attachments = emptyList(),
+            sendAsGroup = false
         )
     }
 

@@ -56,12 +56,12 @@ class SendMathChallenge @Inject constructor(
 
     private fun sendChallengeMessage(phoneNumber: String, question: String) {
         val body = "To verify you're not a robocaller, please reply with the answer: $question"
-        val threadId = 0L // Will be resolved by MessageRepository
-        messageRepository.sendMessage(
+        messageRepository.sendNewMessages(
             subId = -1,
-            threadId = threadId,
-            addresses = listOf(phoneNumber),
-            body = body
+            toAddresses = listOf(phoneNumber),
+            body = body,
+            attachments = emptyList(),
+            sendAsGroup = false
         )
     }
 }

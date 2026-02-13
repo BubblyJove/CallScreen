@@ -6,6 +6,7 @@ import io.reactivex.BackpressureStrategy
 import io.reactivex.Flowable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -289,7 +290,7 @@ class AlchemyWebSocketService @Inject constructor(
         val httpRequest = Request.Builder()
             .url(url)
             .post(okhttp3.RequestBody.create(
-                okhttp3.MediaType.parse("application/json"),
+                "application/json".toMediaTypeOrNull(),
                 requestBody.toString()
             ))
             .build()
@@ -313,7 +314,7 @@ class AlchemyWebSocketService @Inject constructor(
         val blockHttpRequest = Request.Builder()
             .url(url)
             .post(okhttp3.RequestBody.create(
-                okhttp3.MediaType.parse("application/json"),
+                "application/json".toMediaTypeOrNull(),
                 blockRequest.toString()
             ))
             .build()

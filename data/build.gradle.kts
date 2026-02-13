@@ -60,6 +60,9 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
+    // RxPreferences
+    implementation("com.f2prateek.rx.preferences2:rx-preferences:2.0.1")
+
     // OkHttp
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

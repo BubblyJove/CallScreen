@@ -90,7 +90,7 @@ dependencies {
     implementation("io.michaelrocks:libphonenumber-android:8.13.27")
 
     // Quik SMS/MMS transport (klinker android-smsmms)
-    implementation(project(":quik:android-smsmms"))
+    implementation(project(":android-smsmms"))
 
     // Timber logging (required by android-smsmms, also used in our code)
     implementation("com.jakewharton.timber:timber:5.0.1")

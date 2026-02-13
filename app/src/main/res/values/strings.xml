@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CallScreen</string>
+    <string name="default_sms_challenge">Hi! This number screens messages. Please reply with the answer to: %1$s</string>
+    <string name="default_call_challenge">You called a screened number. To get through, reply to this text with the answer to: %1$s</string>
+    <string name="challenge_success">Thanks! Your number has been verified. Your message has been delivered.</string>
+    <string name="call_challenge_success">Thanks! Your number has been verified. Please call again and it will ring through.</string>
+    <string name="notification_channel_name">CallScreen Alerts</string>
+    <string name="notification_channel_description">Notifications for screened calls and messages</string>
+</resources>

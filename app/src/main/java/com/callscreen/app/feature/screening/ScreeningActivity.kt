@@ -1,18 +1,13 @@
 package com.callscreen.app.feature.screening
 
 import android.os.Bundle
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.android.AndroidInjection
 import com.callscreen.app.R
 import com.callscreen.app.common.base.QkThemedActivity
 import com.callscreen.app.databinding.ScreeningActivityBinding
-import javax.inject.Inject
 
 class ScreeningActivity : QkThemedActivity() {
-
-    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
 
     private lateinit var binding: ScreeningActivityBinding
 

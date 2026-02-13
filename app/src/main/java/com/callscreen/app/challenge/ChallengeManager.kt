@@ -1,7 +1,9 @@
 package com.callscreen.app.challenge
 
 import android.content.Context
+import android.os.Build
 import android.telephony.SmsManager
+import android.util.Log
 import com.callscreen.app.R
 import com.callscreen.app.data.AppDatabase
 import com.callscreen.app.data.ChallengeState
@@ -108,19 +110,36 @@ class ChallengeManager(private val context: Context) {
         )
     }
 
+    @Suppress("DEPRECATION")
     private fun sendSms(phoneNumber: String, message: String) {
         try {
-            val smsManager = context.getSystemService(SmsManager::class.java)
+            val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.getSystemService(SmsManager::class.java)
+            } else {
+                SmsManager.getDefault()
+            }
+
+            if (smsManager == null) {
+                Log.e(TAG, "SmsManager is null — cannot send SMS to $phoneNumber")
+                return
+            }
+
             val parts = smsManager.divideMessage(message)
             if (parts.size == 1) {
                 smsManager.sendTextMessage(phoneNumber, null, message, null, null)
             } else {
                 smsManager.sendMultipartTextMessage(phoneNumber, null, parts, null, null)
             }
+            Log.d(TAG, "SMS challenge sent to $phoneNumber")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SEND_SMS permission not granted — cannot send to $phoneNumber", e)
         } catch (e: Exception) {
-            // Log but don't crash - SMS might fail due to permissions or network
-            android.util.Log.e("ChallengeManager", "Failed to send SMS to $phoneNumber", e)
+            Log.e(TAG, "Failed to send SMS to $phoneNumber", e)
         }
+    }
+
+    companion object {
+        private const val TAG = "ChallengeManager"
     }
 
     private data class Challenge(

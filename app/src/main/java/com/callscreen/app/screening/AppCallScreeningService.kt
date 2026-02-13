@@ -2,6 +2,7 @@ package com.callscreen.app.screening
 
 import android.telecom.Call
 import android.telecom.CallScreeningService
+import android.util.Log
 import com.callscreen.app.challenge.ChallengeManager
 import com.callscreen.app.data.AppDatabase
 import com.callscreen.app.data.PendingMessage
@@ -11,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class AppCallScreeningService : CallScreeningService() {
 
@@ -21,42 +23,54 @@ class AppCallScreeningService : CallScreeningService() {
         val number = handle?.schemeSpecificPart
 
         if (number.isNullOrBlank()) {
-            // No number available, let it through
             respondToCall(callDetails, CallResponse.Builder().build())
             return
         }
 
-        scope.launch {
-            val challengeManager = ChallengeManager(applicationContext)
+        // Trust check must complete before we respond, so block briefly.
+        // isNumberTrusted is fast (local DB + contacts lookup).
+        val challengeManager = ChallengeManager(applicationContext)
+        val trusted = runBlocking(Dispatchers.IO) {
+            challengeManager.isNumberTrusted(number)
+        }
 
-            if (challengeManager.isNumberTrusted(number)) {
-                // Known number — let it ring
-                respondToCall(callDetails, CallResponse.Builder().build())
-            } else {
-                // Unknown number — silence and reject, then send challenge
-                val response = CallResponse.Builder()
-                    .setDisallowCall(true)
-                    .setRejectCall(true)
-                    .setSilenceCall(true)
-                    .setSkipNotification(false)  // still show missed call notification
-                    .build()
+        if (trusted) {
+            Log.d(TAG, "Trusted number $number — allowing call")
+            respondToCall(callDetails, CallResponse.Builder().build())
+        } else {
+            Log.d(TAG, "Unknown number $number — rejecting and sending challenge")
+            val response = CallResponse.Builder()
+                .setDisallowCall(true)
+                .setRejectCall(true)
+                .setSilenceCall(true)
+                .setSkipNotification(false)
+                .build()
 
-                respondToCall(callDetails, response)
+            respondToCall(callDetails, response)
 
-                // Log the screened call
-                val db = AppDatabase.getInstance(applicationContext)
-                db.pendingMessageDao().insert(
-                    PendingMessage(
-                        phoneNumber = PhoneNumberUtil.normalize(number),
-                        body = "[Screened call]",
-                        type = MessageType.SMS,
-                        isIncoming = true
+            // Fire-and-forget: log + send SMS challenge on background thread.
+            // Using applicationContext so it survives service destruction.
+            val appContext = applicationContext
+            scope.launch {
+                try {
+                    val db = AppDatabase.getInstance(appContext)
+                    db.pendingMessageDao().insert(
+                        PendingMessage(
+                            phoneNumber = PhoneNumberUtil.normalize(number),
+                            body = "[Screened call]",
+                            type = MessageType.SMS,
+                            isIncoming = true
+                        )
                     )
-                )
-
-                // Send SMS challenge to caller
-                challengeManager.sendChallenge(number, isCall = true)
+                    challengeManager.sendChallenge(number, isCall = true)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to log/challenge $number", e)
+                }
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "CallScreenService"
     }
 }

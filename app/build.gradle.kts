@@ -90,8 +90,11 @@ dependencies {
     implementation("com.f2prateek.rx.preferences2:rx-preferences:2.0.1")
 
     // AutoDispose
-    implementation("com.uber.autodispose:autodispose-android-archcomponents-ktx:1.4.0")
-    implementation("com.uber.autodispose:autodispose-ktx:1.4.0")
+    implementation("com.uber.autodispose:autodispose-android-archcomponents:1.3.0")
+    implementation("com.uber.autodispose:autodispose-android-archcomponents-test:1.3.0")
+    implementation("com.uber.autodispose:autodispose-android:1.3.0")
+    implementation("com.uber.autodispose:autodispose:1.3.0")
+    implementation("com.uber.autodispose:autodispose-lifecycle:1.3.0")
 
     // RxDogTag
     implementation("com.uber.rxdogtag:rxdogtag:1.0.0")

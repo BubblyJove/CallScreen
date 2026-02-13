@@ -8,52 +8,45 @@ import com.callscreen.app.data.AppDatabase
 import com.callscreen.app.data.PendingMessage
 import com.callscreen.app.data.MessageType
 import com.callscreen.app.util.PhoneNumberUtil
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class AppCallScreeningService : CallScreeningService() {
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onScreenCall(callDetails: Call.Details) {
         val handle = callDetails.handle
         val number = handle?.schemeSpecificPart
 
         if (number.isNullOrBlank()) {
+            Log.w(TAG, "No caller number available — letting call through")
             respondToCall(callDetails, CallResponse.Builder().build())
             return
         }
 
-        // Trust check must complete before we respond, so block briefly.
-        // isNumberTrusted is fast (local DB + contacts lookup).
-        val challengeManager = ChallengeManager(applicationContext)
-        val trusted = runBlocking(Dispatchers.IO) {
-            challengeManager.isNumberTrusted(number)
-        }
+        Log.d(TAG, "Screening call from $number")
 
-        if (trusted) {
-            Log.d(TAG, "Trusted number $number — allowing call")
-            respondToCall(callDetails, CallResponse.Builder().build())
-        } else {
-            Log.d(TAG, "Unknown number $number — rejecting and sending challenge")
-            val response = CallResponse.Builder()
-                .setDisallowCall(true)
-                .setRejectCall(true)
-                .setSilenceCall(true)
-                .setSkipNotification(false)
-                .build()
+        // Run everything synchronously on IO so the work finishes before the
+        // system destroys this service.  The total wall time is <200 ms
+        // (local DB queries + one SmsManager.sendTextMessage call).
+        runBlocking(Dispatchers.IO) {
+            val challengeManager = ChallengeManager(applicationContext)
 
-            respondToCall(callDetails, response)
+            if (challengeManager.isNumberTrusted(number)) {
+                Log.d(TAG, "Trusted number $number — allowing call")
+                respondToCall(callDetails, CallResponse.Builder().build())
+            } else {
+                Log.d(TAG, "Unknown number $number — rejecting and sending challenge")
+                val response = CallResponse.Builder()
+                    .setDisallowCall(true)
+                    .setRejectCall(true)
+                    .setSilenceCall(true)
+                    .setSkipNotification(false)
+                    .build()
 
-            // Fire-and-forget: log + send SMS challenge on background thread.
-            // Using applicationContext so it survives service destruction.
-            val appContext = applicationContext
-            scope.launch {
+                respondToCall(callDetails, response)
+
                 try {
-                    val db = AppDatabase.getInstance(appContext)
+                    val db = AppDatabase.getInstance(applicationContext)
                     db.pendingMessageDao().insert(
                         PendingMessage(
                             phoneNumber = PhoneNumberUtil.normalize(number),
@@ -62,6 +55,8 @@ class AppCallScreeningService : CallScreeningService() {
                             isIncoming = true
                         )
                     )
+                    Log.d(TAG, "Logged screened call from $number")
+
                     challengeManager.sendChallenge(number, isCall = true)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to log/challenge $number", e)

@@ -1,9 +1,11 @@
 package com.callscreen.app.challenge
 
+import android.Manifest
 import android.content.Context
-import android.os.Build
+import android.content.pm.PackageManager
 import android.telephony.SmsManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.callscreen.app.R
 import com.callscreen.app.data.AppDatabase
 import com.callscreen.app.data.ChallengeState
@@ -39,25 +41,31 @@ class ChallengeManager(private val context: Context) {
 
     suspend fun sendChallenge(phoneNumber: String, isCall: Boolean) {
         val normalized = PhoneNumberUtil.normalize(phoneNumber)
+        Log.d(TAG, "sendChallenge called for $normalized (isCall=$isCall)")
 
-        // Don't re-send if there's an active challenge
+        // Reuse the existing challenge question if one is active, but always
+        // (re-)send the SMS — a previous send may have failed silently.
+        val challenge: ChallengeState
         val existing = challengeDao.getChallenge(normalized)
-        if (existing != null && !existing.isExpired) return
-
-        val challenge = generateChallenge()
-        challengeDao.upsert(
-            ChallengeState(
+        if (existing != null && !existing.isExpired) {
+            Log.d(TAG, "Reusing existing challenge for $normalized")
+            challenge = existing
+        } else {
+            val new = generateChallenge()
+            challenge = ChallengeState(
                 phoneNumber = normalized,
-                challengeQuestion = challenge.question,
-                expectedAnswer = challenge.answer,
-                type = challenge.type
+                challengeQuestion = new.question,
+                expectedAnswer = new.answer,
+                type = new.type
             )
-        )
+            challengeDao.upsert(challenge)
+            Log.d(TAG, "Created new challenge for $normalized")
+        }
 
         val template = if (isCall) {
-            context.getString(R.string.default_call_challenge, challenge.question)
+            context.getString(R.string.default_call_challenge, challenge.challengeQuestion)
         } else {
-            context.getString(R.string.default_sms_challenge, challenge.question)
+            context.getString(R.string.default_sms_challenge, challenge.challengeQuestion)
         }
 
         sendSms(normalized, template)
@@ -112,17 +120,16 @@ class ChallengeManager(private val context: Context) {
 
     @Suppress("DEPRECATION")
     private fun sendSms(phoneNumber: String, message: String) {
-        try {
-            val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                context.getSystemService(SmsManager::class.java)
-            } else {
-                SmsManager.getDefault()
-            }
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.e(TAG, "SEND_SMS permission not granted — cannot send to $phoneNumber")
+            return
+        }
 
-            if (smsManager == null) {
-                Log.e(TAG, "SmsManager is null — cannot send SMS to $phoneNumber")
-                return
-            }
+        try {
+            val smsManager = SmsManager.getDefault()
+            Log.d(TAG, "Sending SMS to $phoneNumber: ${message.take(60)}...")
 
             val parts = smsManager.divideMessage(message)
             if (parts.size == 1) {
@@ -130,9 +137,7 @@ class ChallengeManager(private val context: Context) {
             } else {
                 smsManager.sendMultipartTextMessage(phoneNumber, null, parts, null, null)
             }
-            Log.d(TAG, "SMS challenge sent to $phoneNumber")
-        } catch (e: SecurityException) {
-            Log.e(TAG, "SEND_SMS permission not granted — cannot send to $phoneNumber", e)
+            Log.d(TAG, "sendTextMessage returned OK for $phoneNumber")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to send SMS to $phoneNumber", e)
         }

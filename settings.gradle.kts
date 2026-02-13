@@ -17,5 +17,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "CallScreen"
 include(":app")
-include(":android-smsmms")
-project(":android-smsmms").projectDir = file("quik/android-smsmms")
+include(":libs:android-smsmms")

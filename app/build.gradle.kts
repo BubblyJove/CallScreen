@@ -86,6 +86,15 @@ dependencies {
     // Preferences DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
+    // Phone number formatting
+    implementation("io.michaelrocks:libphonenumber-android:8.13.27")
+
+    // Quik SMS/MMS transport (klinker android-smsmms)
+    implementation(project(":quik:android-smsmms"))
+
+    // Timber logging (required by android-smsmms, also used in our code)
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

@@ -2,7 +2,6 @@ package com.callscreen.app.ui.screens
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -59,7 +58,7 @@ fun DebugLogScreen(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Button(onClick = {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return@Button
                 clipboard.setPrimaryClip(ClipData.newPlainText("CallScreen log", logText))
                 Toast.makeText(context, "Log copied", Toast.LENGTH_SHORT).show()
             }) {

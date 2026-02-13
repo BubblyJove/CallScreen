@@ -8,10 +8,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,8 +35,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.callscreen.app.ui.MainViewModel
+import com.callscreen.app.util.ContactCache
+
+private const val MAX_PHONE_LENGTH = 20
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +55,7 @@ fun SettingsScreen(
     val whitelist by viewModel.whitelistedContacts.collectAsState()
     val whitelistCount by viewModel.whitelistCount.collectAsState()
     var newNumber by rememberSaveable { mutableStateOf("") }
+    val context = LocalContext.current
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Settings") })
@@ -55,7 +64,6 @@ fun SettingsScreen(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Role setup section
             item {
                 Text(
                     "Setup",
@@ -82,7 +90,6 @@ fun SettingsScreen(
                 )
             }
 
-            // Whitelist section
             item {
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -99,7 +106,7 @@ fun SettingsScreen(
                 ) {
                     OutlinedTextField(
                         value = newNumber,
-                        onValueChange = { newNumber = it },
+                        onValueChange = { newNumber = it.take(MAX_PHONE_LENGTH) },
                         label = { Text("Phone number") },
                         modifier = Modifier.weight(1f),
                         singleLine = true
@@ -118,6 +125,7 @@ fun SettingsScreen(
             }
 
             items(whitelist, key = { it.phoneNumber }) { contact ->
+                val displayName = ContactCache.getDisplayName(context, contact.phoneNumber)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -125,22 +133,27 @@ fun SettingsScreen(
                     )
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                contact.phoneNumber,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            contact.displayName?.let {
+                            val name = displayName ?: contact.displayName
+                            if (name != null) {
                                 Text(
-                                    it,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    name,
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
                             }
+                            Text(
+                                contact.phoneNumber,
+                                style = if (name != null) MaterialTheme.typography.bodySmall
+                                else MaterialTheme.typography.bodyLarge,
+                                color = if (name != null) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.onSurface
+                            )
                             Text(
                                 contact.source.name.lowercase().replace('_', ' '),
                                 style = MaterialTheme.typography.labelSmall,
@@ -176,10 +189,20 @@ private fun RoleCard(
         )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                imageVector = if (isActive) Icons.Filled.CheckCircle else Icons.Filled.Warning,
+                contentDescription = null,
+                tint = if (isActive) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall)
                 Text(

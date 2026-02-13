@@ -4,6 +4,8 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import com.callscreen.app.data.AppDatabase
+import com.callscreen.app.util.ScreenLog
+import io.michaelrocks.libphonenumber.android.PhoneNumberUtil
 
 class CallScreenApp : Application() {
 
@@ -11,6 +13,11 @@ class CallScreenApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        try {
+            phoneNumberUtil = PhoneNumberUtil.createInstance(this)
+        } catch (e: Exception) {
+            ScreenLog.e("CallScreenApp", "Failed to init libphonenumber", e)
+        }
         createNotificationChannels()
     }
 
@@ -28,5 +35,9 @@ class CallScreenApp : Application() {
 
     companion object {
         const val CHANNEL_ID = "callscreen_notifications"
+
+        @Volatile
+        var phoneNumberUtil: PhoneNumberUtil? = null
+            private set
     }
 }

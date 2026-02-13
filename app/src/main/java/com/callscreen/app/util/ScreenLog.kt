@@ -7,7 +7,7 @@ import java.util.Locale
 
 /**
  * In-memory log buffer visible in the app's Debug tab.
- * Also forwards to logcat.
+ * Also forwards to logcat. Thread-safe via synchronized blocks (rule 4.1).
  */
 object ScreenLog {
 
@@ -15,7 +15,8 @@ object ScreenLog {
     private val entries = mutableListOf<String>()
     private val sdf = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
 
-    /** Listeners notified on every new entry (UI recomposition trigger). */
+    /** Listener notified on every new entry (UI recomposition trigger). */
+    @Volatile
     var onChange: (() -> Unit)? = null
 
     fun d(tag: String, msg: String) {

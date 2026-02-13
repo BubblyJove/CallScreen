@@ -134,6 +134,7 @@
     <string name="compose_title_selected">%d selected</string>
     <string name="compose_subtitle_results">%1$d of %2$d results</string>
     <string name="compose_send_group_title">Send as group message</string>
+    <string name="compose_send_group_summary">Recipients and replies will be visible to everyone</string>
     <string name="compose_send_group_summary_on">Recipients and replies will be visible to everyone</string>
     <string name="compose_send_group_summary_off">Messages will be sent separately to all recipients</string>
     <string name="compose_messages_empty">This is the start of your conversation. Say something nice!</string>

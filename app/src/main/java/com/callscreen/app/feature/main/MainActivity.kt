@@ -44,7 +44,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.jakewharton.rxbinding2.view.clicks
 import com.jakewharton.rxbinding2.widget.textChanges
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import dagger.android.AndroidInjection
 import com.callscreen.app.R
 import com.callscreen.app.common.Navigator
@@ -153,7 +153,7 @@ class MainActivity : QkThemedActivity(), MainView {
 
         snackbarBinding = MainPermissionHintBinding.bind(binding.snackbar.inflate()).also {
             it.snackbarButton.clicks()
-                .autoDisposable(scope(Lifecycle.Event.ON_DESTROY))
+                .autoDispose(scope(Lifecycle.Event.ON_DESTROY))
                 .subscribe(snackbarButtonIntent)
         }
 
@@ -172,11 +172,11 @@ class MainActivity : QkThemedActivity(), MainView {
         conversationsAdapter.autoScrollToStart(binding.recyclerView)
 
         // Don't allow clicks to pass through the drawer layout
-        binding.drawer.root.clicks().autoDisposable(scope()).subscribe()
+        binding.drawer.root.clicks().autoDispose(scope()).subscribe()
 
         // Set the theme color tint to the recyclerView, progressbar, and FAB
         theme
-                .autoDisposable(scope())
+                .autoDispose(scope())
                 .subscribe { theme ->
                     // Set the color for the drawer icons
                     val states = arrayOf(

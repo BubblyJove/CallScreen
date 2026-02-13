@@ -22,7 +22,7 @@ import android.content.Context
 import android.media.RingtoneManager
 import android.net.Uri
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import com.callscreen.app.R
 import com.callscreen.app.common.Navigator
 import com.callscreen.app.common.base.QkViewModel
@@ -104,7 +104,7 @@ class NotificationPrefsViewModel @Inject constructor(
         super.bindView(view)
 
         view.preferenceClickIntent
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { preferenceView ->
                     when (preferenceView.id) {
                         R.id.notificationsO -> navigator.showNotificationChannel(threadId)
@@ -136,11 +136,11 @@ class NotificationPrefsViewModel @Inject constructor(
                 }
 
         view.previewModeSelectedIntent
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { previews.set(it) }
 
         view.ringtoneSelectedIntent
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { ringtone -> this.ringtone.set(ringtone) }
 
         view.actionsSelectedIntent
@@ -151,7 +151,7 @@ class NotificationPrefsViewModel @Inject constructor(
                         R.id.action3 -> prefs.notifAction3.set(action)
                     }
                 }
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe()
     }
 }

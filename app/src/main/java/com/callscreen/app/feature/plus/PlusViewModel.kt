@@ -19,7 +19,7 @@
 package com.callscreen.app.feature.plus
 
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import com.callscreen.app.common.Navigator
 import com.callscreen.app.common.base.QkViewModel
 import com.callscreen.app.manager.BillingManager
@@ -53,31 +53,31 @@ class PlusViewModel @Inject constructor(
         Observable.merge(
                 view.upgradeIntent.map { BillingManager.SKU_PLUS },
                 view.upgradeDonateIntent.map { BillingManager.SKU_PLUS_DONATE })
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { sku -> view.initiatePurchaseFlow(billingManager, sku) }
 
 //        view.donateIntent
-//                .autoDisposable(view.scope())
+//                .autoDispose(view.scope())
 //                .subscribe { navigator.showDonation() }
 
         view.themeClicks
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { navigator.showSettings() }
 
         view.scheduleClicks
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { navigator.showScheduled(null) }
 
         view.backupClicks
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { navigator.showBackup() }
 
         view.delayedClicks
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { navigator.showSettings() }
 
         view.nightClicks
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { navigator.showSettings() }
     }
 

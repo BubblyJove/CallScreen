@@ -59,7 +59,7 @@ import com.jakewharton.rxbinding2.widget.textChanges
 import com.callscreen.app.common.QkMediaPlayer
 import com.uber.autodispose.ObservableSubscribeProxy
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import dagger.android.AndroidInjection
 import com.callscreen.app.R
 import com.callscreen.app.common.Navigator
@@ -168,7 +168,7 @@ class ComposeActivity : QkThemedActivity(), ComposeView {
         return Observable.interval(500, TimeUnit.MILLISECONDS)
             .subscribeOn(Schedulers.single())
             .observeOn(AndroidSchedulers.mainThread())
-            .autoDisposable(scope())
+            .autoDispose(scope())
     }
 
     private fun isSpeechRecognitionAvailable(): Boolean {
@@ -236,13 +236,13 @@ class ComposeActivity : QkThemedActivity(), ComposeView {
 
                     messageAdapter.theme = it
                 }
-                .autoDisposable(scope())
+                .autoDispose(scope())
                 .subscribe()
 
             // context menu registration for message parts
             messagePartContextMenuRegistrar
                 .mapNotNull { it }
-                .autoDisposable(scope())
+                .autoDispose(scope())
                 .subscribe { registerForContextMenu(it) }
 
             // drag drop handlers for speech-to-text icon
@@ -280,7 +280,7 @@ class ComposeActivity : QkThemedActivity(), ComposeView {
             recordAudioChronometer
                 .subscribeOn(AndroidSchedulers.mainThread())
                 .distinctUntilChanged()
-                .autoDisposable(scope())
+                .autoDispose(scope())
                 .subscribe {
                     if (it) {
                         binding.audioMsgDuration.base = SystemClock.elapsedRealtime()
@@ -300,7 +300,7 @@ class ComposeActivity : QkThemedActivity(), ComposeView {
             recordAudioMsgRecordVisible
                 .subscribeOn(AndroidSchedulers.mainThread())
                 .distinctUntilChanged()
-                .autoDisposable(scope())
+                .autoDispose(scope())
                 .subscribe {
                     binding.audioMsgRecord.isVisible = it
                     binding.audioMsgDuration.isVisible =
@@ -311,7 +311,7 @@ class ComposeActivity : QkThemedActivity(), ComposeView {
             recordAudioPlayerVisible
                 .subscribeOn(AndroidSchedulers.mainThread())
                 .distinctUntilChanged()
-                .autoDisposable(scope())
+                .autoDispose(scope())
                 .subscribe {
                     binding.audioMsgPlayerBackground.isVisible = it
                     recordAudioPlayerConfigUI.onNext(QkMediaPlayer.PlayingState.Stopped)
@@ -320,7 +320,7 @@ class ComposeActivity : QkThemedActivity(), ComposeView {
             recordAudioPlayerConfigUI
                 .subscribeOn(AndroidSchedulers.mainThread())
                 .distinctUntilChanged()
-                .autoDisposable(scope())
+                .autoDispose(scope())
                 .subscribe {
                     when (it) {
                         QkMediaPlayer.PlayingState.Playing -> {

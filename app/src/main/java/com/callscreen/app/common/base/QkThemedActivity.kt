@@ -27,7 +27,7 @@ import android.view.View
 import androidx.core.view.iterator
 import androidx.lifecycle.Lifecycle
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import com.callscreen.app.R
 import com.callscreen.app.common.util.Colors
 import com.callscreen.app.common.util.extensions.resolveThemeBoolean
@@ -104,7 +104,7 @@ abstract class QkThemedActivity : QkActivity() {
         Observable.merge(triggers.map { it.asObservable().skip(1) })
                 .debounce(400, TimeUnit.MILLISECONDS)
                 .observeOn(AndroidSchedulers.mainThread())
-                .autoDisposable(scope())
+                .autoDispose(scope())
                 .subscribe { recreate() }
 
         // We can only set light nav bar on API 27 in attrs, but we can do it in API 26 here
@@ -143,7 +143,7 @@ abstract class QkThemedActivity : QkActivity() {
 
                 menuItem.icon = menuItem.icon?.apply { setTint(tint) }
             }
-        }.autoDisposable(scope(Lifecycle.Event.ON_DESTROY)).subscribe()
+        }.autoDispose(scope(Lifecycle.Event.ON_DESTROY)).subscribe()
     }
 
     open fun getColoredMenuItems(): List<Int> {

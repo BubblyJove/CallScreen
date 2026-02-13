@@ -23,7 +23,7 @@ import android.view.View
 import androidx.appcompat.app.AlertDialog
 import com.jakewharton.rxbinding2.view.clicks
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import com.callscreen.app.R
 import com.callscreen.app.common.base.QkController
 import com.callscreen.app.common.util.Colors
@@ -87,7 +87,7 @@ class MessageContentFiltersController : QkController<MessageContentFiltersContro
             .mapNotNull { view -> view as? PreferenceView }
             .map { preference -> preference.clicks().map { preference } }
             .let { Observable.merge(it) }
-            .autoDisposable(scope())
+            .autoDispose(scope())
             .subscribe { pref ->
                 pref.checkbox?.let { it.isChecked = !it.isChecked }
                 val regexChecked = layout.regexp.checkbox?.isChecked ?: false

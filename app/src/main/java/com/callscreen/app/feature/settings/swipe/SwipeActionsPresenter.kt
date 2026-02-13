@@ -21,7 +21,7 @@ package com.callscreen.app.feature.settings.swipe
 import android.content.Context
 import androidx.annotation.DrawableRes
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import com.callscreen.app.R
 import com.callscreen.app.common.base.QkPresenter
 import com.callscreen.app.util.Preferences
@@ -53,7 +53,7 @@ class SwipeActionsPresenter @Inject constructor(
                         SwipeActionsView.Action.LEFT -> prefs.swipeLeft.get()
                     }
                 }
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe(view::showSwipeActions)
 
         view.actionSelected()
@@ -63,7 +63,7 @@ class SwipeActionsPresenter @Inject constructor(
                         SwipeActionsView.Action.LEFT -> prefs.swipeLeft.set(actionId)
                     }
                 }
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe()
     }
 

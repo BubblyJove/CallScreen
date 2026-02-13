@@ -16,8 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with QKSMS.  If not, see <http://www.gnu.org/licenses/>.
  */
-@file:Suppress("NOTHING_TO_INLINE")
-
 package com.callscreen.app.common.androidxcompat
 
 import androidx.annotation.CheckResult
@@ -34,7 +32,7 @@ import io.reactivex.functions.Consumer
  * *Note:* A value will be emitted immediately on subscribe.
  */
 @CheckResult
-inline fun DrawerLayout.drawerOpen(gravity: Int): InitialValueObservable<Boolean> = DrawerLayoutDrawerOpenedObservable(this, gravity)
+fun DrawerLayout.drawerOpen(gravity: Int): InitialValueObservable<Boolean> = DrawerLayoutDrawerOpenedObservable(this, gravity)
 
 /**
  * An action which sets whether the drawer with `gravity` of `view` is open.

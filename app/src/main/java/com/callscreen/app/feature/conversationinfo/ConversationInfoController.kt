@@ -25,7 +25,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.GridLayoutManager
 import com.bluelinelabs.conductor.RouterTransaction
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import com.callscreen.app.R
 import com.callscreen.app.common.Navigator
 import com.callscreen.app.common.QkChangeHandler
@@ -79,7 +79,7 @@ class ConversationInfoController(
         }
 
         themedActivity?.theme
-                ?.autoDisposable(scope())
+                ?.autoDispose(scope())
                 ?.subscribe { binding.recyclerView.scrapViews() }
     }
 

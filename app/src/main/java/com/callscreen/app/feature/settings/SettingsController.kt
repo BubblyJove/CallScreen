@@ -32,7 +32,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.jakewharton.rxbinding2.view.clicks
 import com.jakewharton.rxbinding2.view.longClicks
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import com.callscreen.app.BuildConfig
 import com.callscreen.app.R
 import com.callscreen.app.common.MenuItem
@@ -89,7 +89,7 @@ class SettingsController : QkController<SettingsControllerBinding, SettingsView,
         retainViewMode = RetainViewMode.RETAIN_DETACH
 
         colors.themeObservable()
-                .autoDisposable(scope())
+                .autoDispose(scope())
                 .subscribe { activity?.recreate() }
     }
 

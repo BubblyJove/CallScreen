@@ -19,7 +19,7 @@
 package com.callscreen.app.feature.settings.about
 
 import com.uber.autodispose.android.lifecycle.scope
-import com.uber.autodispose.autoDisposable
+import com.uber.autodispose.autoDispose
 import com.callscreen.app.R
 import com.callscreen.app.common.Navigator
 import com.callscreen.app.common.base.QkPresenter
@@ -33,7 +33,7 @@ class AboutPresenter @Inject constructor(
         super.bindIntents(view)
 
         view.preferenceClicks()
-                .autoDisposable(view.scope())
+                .autoDispose(view.scope())
                 .subscribe { preference ->
                     when (preference.id) {
                         R.id.developer -> navigator.showDeveloper()

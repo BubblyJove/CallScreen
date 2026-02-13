@@ -84,17 +84,18 @@ dependencies {
     implementation("io.reactivex.rxjava2:rxkotlin:2.4.0")
 
     // RxBinding
-    implementation("com.jakewharton.rxbinding2:rxbinding:2.2.0")
+    implementation("com.jakewharton.rxbinding2:rxbinding-kotlin:2.2.0")
+    implementation("com.jakewharton.rxbinding2:rxbinding-support-v4-kotlin:2.2.0")
 
     // RxPreferences
     implementation("com.f2prateek.rx.preferences2:rx-preferences:2.0.1")
 
     // AutoDispose
-    implementation("com.uber.autodispose:autodispose-android-archcomponents:1.3.0")
-    implementation("com.uber.autodispose:autodispose-android-archcomponents-test:1.3.0")
-    implementation("com.uber.autodispose:autodispose-android:1.3.0")
-    implementation("com.uber.autodispose:autodispose:1.3.0")
-    implementation("com.uber.autodispose:autodispose-lifecycle:1.3.0")
+    implementation("com.uber.autodispose:autodispose-android-archcomponents:1.4.0")
+    implementation("com.uber.autodispose:autodispose-android-archcomponents-test:1.4.0")
+    implementation("com.uber.autodispose:autodispose-android:1.4.0")
+    implementation("com.uber.autodispose:autodispose:1.4.0")
+    implementation("com.uber.autodispose:autodispose-lifecycle:1.4.0")
 
     // RxDogTag
     implementation("com.uber.rxdogtag:rxdogtag:1.0.0")
@@ -124,6 +125,7 @@ dependencies {
 
     // Conductor
     implementation("com.bluelinelabs:conductor:2.1.5")
+    implementation("com.bluelinelabs:conductor-archlifecycle:2.1.5")
 
     // Glide
     implementation("com.github.bumptech.glide:glide:4.16.0")
@@ -146,6 +148,19 @@ dependencies {
 
     // Web3j (for crypto challenges)
     implementation("org.web3j:core:4.10.3")
+
+    // Realm Adapters
+    implementation("io.realm:android-adapters:4.0.0")
+
+    // ShortcutBadger
+    implementation("me.leolin:ShortcutBadger:1.1.22")
+
+    // ezvcard
+    implementation("com.googlecode.ez-vcard:ez-vcard:0.10.4") {
+        exclude(group = "org.jsoup", module = "jsoup")
+        exclude(group = "org.freemarker", module = "freemarker")
+        exclude(group = "com.fasterxml.jackson.core", module = "jackson-core")
+    }
 
     // Timber
     implementation("com.jakewharton.timber:timber:5.0.1")

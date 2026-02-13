@@ -25,10 +25,10 @@ import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewbinding.ViewBinding
-import com.bluelinelabs.conductor.Controller
+import com.bluelinelabs.conductor.archlifecycle.LifecycleController
 import com.callscreen.app.R
 
-abstract class QkController<VB : ViewBinding, ViewContract : QkViewContract<State>, State, Presenter : QkPresenter<ViewContract, State>> : Controller() {
+abstract class QkController<VB : ViewBinding, ViewContract : QkViewContract<State>, State, Presenter : QkPresenter<ViewContract, State>> : LifecycleController() {
 
     abstract var presenter: Presenter
 

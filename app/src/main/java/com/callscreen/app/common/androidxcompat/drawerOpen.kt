@@ -23,7 +23,6 @@ package com.callscreen.app.common.androidxcompat
 import androidx.annotation.CheckResult
 import androidx.drawerlayout.widget.DrawerLayout
 import com.jakewharton.rxbinding2.InitialValueObservable
-import com.jakewharton.rxbinding2.support.v4.widget.RxDrawerLayout
 import io.reactivex.functions.Consumer
 
 /**
@@ -35,7 +34,7 @@ import io.reactivex.functions.Consumer
  * *Note:* A value will be emitted immediately on subscribe.
  */
 @CheckResult
-inline fun DrawerLayout.drawerOpen(gravity: Int): InitialValueObservable<Boolean> = RxDrawerLayout.drawerOpen(this, gravity)
+inline fun DrawerLayout.drawerOpen(gravity: Int): InitialValueObservable<Boolean> = DrawerLayoutDrawerOpenedObservable(this, gravity)
 
 /**
  * An action which sets whether the drawer with `gravity` of `view` is open.
@@ -44,4 +43,6 @@ inline fun DrawerLayout.drawerOpen(gravity: Int): InitialValueObservable<Boolean
  * to free this reference.
  */
 @CheckResult
-inline fun DrawerLayout.open(gravity: Int): Consumer<in Boolean> = RxDrawerLayout.open(this, gravity)
+fun DrawerLayout.open(gravity: Int): Consumer<in Boolean> = Consumer { open ->
+    if (open) openDrawer(gravity) else closeDrawer(gravity)
+}

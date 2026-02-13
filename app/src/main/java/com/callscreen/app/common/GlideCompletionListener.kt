@@ -35,9 +35,9 @@ class GlideCompletionListener<T>(private val listener: () -> Unit) : RequestList
     }
 
     override fun onResourceReady(
-        resource: T,
+        resource: T & Any,
         model: Any,
-        target: Target<T>?,
+        target: Target<T>,
         dataSource: DataSource,
         isFirstResource: Boolean
     ): Boolean {

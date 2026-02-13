@@ -608,6 +608,15 @@
 
     <string name="messages_text_share_file_error">Oops! Something went wrong while sharing</string>
 
+    <!-- CallScreen notification channel -->
+    <string name="notification_channel_name">Call Screening</string>
+    <string name="notification_channel_description">Notifications for call screening and challenges</string>
+
+    <!-- CallScreen challenge strings -->
+    <string name="default_call_challenge">You are receiving this message because you called a screened number. To be connected, please answer: %s</string>
+    <string name="default_sms_challenge">You are receiving this message because you texted a screened number. To have your message delivered, please reply with the answer: %s</string>
+    <string name="challenge_success">Challenge passed! Your messages will now be delivered.</string>
+
     <!-- CallScreen additions -->
     <string name="screening_title">Call Screening</string>
     <string name="screening_tab_pending">Pending</string>

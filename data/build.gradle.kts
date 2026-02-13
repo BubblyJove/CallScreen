@@ -72,7 +72,7 @@ dependencies {
     implementation("io.michaelrocks:libphonenumber-android:8.13.27")
 
     // Call Control datashare
-    implementation("com.Boris.callcontrol:datashare:1.3.0")
+    implementation("com.callcontrol:datashare:1.3.0")
 
     // Timber
     implementation("com.jakewharton.timber:timber:5.0.1")

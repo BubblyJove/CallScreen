@@ -12,6 +12,12 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
+        @Suppress("DEPRECATION")
+        jcenter {
+            content {
+                includeGroup("com.callcontrol")
+            }
+        }
     }
 }
 

@@ -17,4 +17,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "CallScreen"
 include(":app")
+include(":domain")
+include(":data")
+include(":common")
 include(":libs:android-smsmms")

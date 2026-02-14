@@ -128,6 +128,12 @@
         <!-- CallScreen: Debug Log Viewer -->
         <activity android:name=".feature.debug.DebugActivity" />
 
+        <!-- CallScreen: Crypto Settings -->
+        <activity android:name=".feature.settings.crypto.CryptoSettingsActivity" />
+
+        <!-- CallScreen: Call Screening Settings -->
+        <activity android:name=".feature.settings.screening.CallScreeningSettingsActivity" />
+
         <!-- Call Screening Service (our addition) -->
         <service
             android:name=".screening.AppCallScreeningService"

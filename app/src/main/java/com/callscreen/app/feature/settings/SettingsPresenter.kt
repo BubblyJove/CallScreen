@@ -216,7 +216,9 @@ class SettingsPresenter @Inject constructor(
 
                         R.id.disableScreenshots -> prefs.disableScreenshots.set(!prefs.disableScreenshots.get())
 
-                        R.id.cryptoChallenge -> view.showCryptoSettings()
+                        R.id.cryptoChallenge -> navigator.showCryptoSettings()
+
+                        R.id.callScreeningSettings -> navigator.showCallScreeningSettings()
 
                         R.id.sync -> syncMessages.execute(Unit)
 

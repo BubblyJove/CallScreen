@@ -47,7 +47,6 @@ import com.callscreen.app.common.widget.PreferenceView
 import com.callscreen.app.common.widget.TextInputDialog
 import com.callscreen.app.databinding.SettingsControllerBinding
 import com.callscreen.app.feature.settings.about.AboutController
-import com.callscreen.app.feature.settings.crypto.CryptoSettingsController
 import com.callscreen.app.feature.settings.swipe.SwipeActionsController
 import com.callscreen.app.feature.themepicker.ThemePickerController
 import com.callscreen.app.injection.appComponent
@@ -252,12 +251,6 @@ class SettingsController : QkController<SettingsControllerBinding, SettingsView,
 
     override fun showThemePicker() {
         router.pushController(RouterTransaction.with(ThemePickerController())
-                .pushChangeHandler(QkChangeHandler())
-                .popChangeHandler(QkChangeHandler()))
-    }
-
-    override fun showCryptoSettings() {
-        router.pushController(RouterTransaction.with(CryptoSettingsController())
                 .pushChangeHandler(QkChangeHandler())
                 .popChangeHandler(QkChangeHandler()))
     }

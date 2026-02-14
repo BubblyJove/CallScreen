@@ -1,44 +1,41 @@
 package com.callscreen.app.feature.settings.crypto
 
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Switch
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import com.bluelinelabs.conductor.archlifecycle.LifecycleController
 import com.callscreen.app.R
-import com.callscreen.app.injection.appComponent
+import com.callscreen.app.common.base.QkActivity
 import com.callscreen.app.model.CryptoPaymentChallenge
 import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.util.ScreenLog
+import dagger.android.AndroidInjection
 import timber.log.Timber
 import javax.inject.Inject
 
-class CryptoSettingsController : LifecycleController() {
+class CryptoSettingsActivity : QkActivity() {
 
     @Inject lateinit var cryptoRepository: CryptoRepository
 
-    init {
-        appComponent.inject(this)
-        ScreenLog.d("CryptoSettings", "Controller created, injection complete")
-    }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        AndroidInjection.inject(this)
+        setTheme(R.style.AppTheme)
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_crypto_settings)
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup): View {
-        ScreenLog.d("CryptoSettings", "onCreateView")
-        val view = inflater.inflate(R.layout.controller_crypto_settings, container, false)
+        showBackButton(true)
+        title = getString(R.string.crypto_settings_title)
 
-        val enableSwitch = view.findViewById<Switch>(R.id.cryptoEnabled)
-        val priceInput = view.findViewById<EditText>(R.id.challengePrice)
-        val tokenSpinner = view.findViewById<Spinner>(R.id.tokenType)
-        val ethWalletInput = view.findViewById<EditText>(R.id.ethWallet)
-        val usdcWalletInput = view.findViewById<EditText>(R.id.usdcWallet)
-        val usdtWalletInput = view.findViewById<EditText>(R.id.usdtWallet)
-        val alchemyKeyInput = view.findViewById<EditText>(R.id.alchemyKey)
-        val saveButton = view.findViewById<View>(R.id.saveButton)
+        val enableSwitch = findViewById<Switch>(R.id.cryptoEnabled)
+        val priceInput = findViewById<EditText>(R.id.challengePrice)
+        val tokenSpinner = findViewById<Spinner>(R.id.tokenType)
+        val ethWalletInput = findViewById<EditText>(R.id.ethWallet)
+        val usdcWalletInput = findViewById<EditText>(R.id.usdcWallet)
+        val usdtWalletInput = findViewById<EditText>(R.id.usdtWallet)
+        val alchemyKeyInput = findViewById<EditText>(R.id.alchemyKey)
+        val saveButton = findViewById<android.view.View>(R.id.saveButton)
 
         // Load current values
         enableSwitch.isChecked = cryptoRepository.isCryptoChallengeEnabled()
@@ -50,7 +47,7 @@ class CryptoSettingsController : LifecycleController() {
 
         // Token type spinner
         val tokenTypes = CryptoPaymentChallenge.TokenType.values().map { it.name }
-        val adapter = ArrayAdapter(view.context, android.R.layout.simple_spinner_dropdown_item, tokenTypes)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, tokenTypes)
         tokenSpinner.adapter = adapter
         val currentToken = cryptoRepository.getPreferredTokenType()
         tokenSpinner.setSelection(CryptoPaymentChallenge.TokenType.values().indexOf(currentToken))
@@ -71,27 +68,15 @@ class CryptoSettingsController : LifecycleController() {
                 cryptoRepository.setWalletAddress(CryptoPaymentChallenge.TokenType.USDT, usdtWalletInput.text.toString().trim())
                 cryptoRepository.setAlchemyApiKey(alchemyKeyInput.text.toString().trim())
 
-                Toast.makeText(view.context, R.string.crypto_settings_saved, Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.crypto_settings_saved, Toast.LENGTH_SHORT).show()
                 ScreenLog.d("CryptoSettings", "Settings saved")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to save crypto settings")
                 ScreenLog.e("CryptoSettings", "Failed to save", e)
-                Toast.makeText(view.context, R.string.crypto_settings_error, Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.crypto_settings_error, Toast.LENGTH_SHORT).show()
             }
         }
 
-        ScreenLog.d("CryptoSettings", "View setup complete")
-        return view
-    }
-
-    override fun onAttach(view: View) {
-        super.onAttach(view)
-        activity?.title = activity?.getString(R.string.crypto_settings_title)
-        (activity as? AppCompatActivity)?.supportActionBar?.setDisplayHomeAsUpEnabled(true)
-    }
-
-    override fun handleBack(): Boolean {
-        router.popCurrentController()
-        return true
+        ScreenLog.d("CryptoSettings", "Activity created")
     }
 }

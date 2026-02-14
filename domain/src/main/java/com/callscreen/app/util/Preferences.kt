@@ -137,6 +137,11 @@ class Preferences @Inject constructor(
     val logging = rxPrefs.getBoolean("logging", false)
     val unreadAtTop = rxPrefs.getBoolean("unreadAtTop", false)
 
+    // Call screening
+    val callScreeningEnabled = rxPrefs.getBoolean("callScreeningEnabled", true)
+    val screenUnknownOnly = rxPrefs.getBoolean("screenUnknownOnly", true)
+    val mathChallengeEnabled = rxPrefs.getBoolean("mathChallengeEnabled", true)
+
     val autoDeduplicate = rxPrefs.getBoolean("autoDeduplicateMessages", false)
 
     init {

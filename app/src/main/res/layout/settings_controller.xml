@@ -249,6 +249,14 @@
             app:summary="@string/crypto_settings_summary"
             app:title="@string/crypto_settings_title" />
 
+        <com.callscreen.app.common.widget.PreferenceView
+            android:id="@+id/callScreeningSettings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/ic_call_white_24dp"
+            app:summary="@string/call_screening_settings_summary"
+            app:title="@string/call_screening_settings_title" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"

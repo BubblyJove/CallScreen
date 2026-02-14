@@ -44,6 +44,8 @@ import com.callscreen.app.feature.scheduled.ScheduledActivity
 import com.callscreen.app.feature.screening.ScreeningActivity
 import com.callscreen.app.feature.debug.DebugActivity
 import com.callscreen.app.feature.settings.SettingsActivity
+import com.callscreen.app.feature.settings.crypto.CryptoSettingsActivity
+import com.callscreen.app.feature.settings.screening.CallScreeningSettingsActivity
 import com.callscreen.app.manager.BillingManager
 import com.callscreen.app.manager.NotificationManager
 import com.callscreen.app.manager.PermissionManager
@@ -191,6 +193,14 @@ class Navigator @Inject constructor(
 
     fun showDebug() {
         startActivity(Intent(context, DebugActivity::class.java))
+    }
+
+    fun showCryptoSettings() {
+        startActivity(Intent(context, CryptoSettingsActivity::class.java))
+    }
+
+    fun showCallScreeningSettings() {
+        startActivity(Intent(context, CallScreeningSettingsActivity::class.java))
     }
 
     fun showDeveloper() {

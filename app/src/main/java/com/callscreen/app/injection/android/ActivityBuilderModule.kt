@@ -25,6 +25,8 @@ import com.callscreen.app.feature.blocking.BlockingActivity
 import com.callscreen.app.feature.compose.ComposeActivity
 import com.callscreen.app.feature.debug.DebugActivity
 import com.callscreen.app.feature.screening.ScreeningActivity
+import com.callscreen.app.feature.settings.crypto.CryptoSettingsActivity
+import com.callscreen.app.feature.settings.screening.CallScreeningSettingsActivity
 import com.callscreen.app.feature.compose.ComposeActivityModule
 import com.callscreen.app.feature.contacts.ContactsActivity
 import com.callscreen.app.feature.contacts.ContactsActivityModule
@@ -107,5 +109,13 @@ abstract class ActivityBuilderModule {
     @ActivityScope
     @ContributesAndroidInjector(modules = [])
     abstract fun bindDebugActivity(): DebugActivity
+
+    @ActivityScope
+    @ContributesAndroidInjector(modules = [])
+    abstract fun bindCryptoSettingsActivity(): CryptoSettingsActivity
+
+    @ActivityScope
+    @ContributesAndroidInjector(modules = [])
+    abstract fun bindCallScreeningSettingsActivity(): CallScreeningSettingsActivity
 
 }

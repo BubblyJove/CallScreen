@@ -3,6 +3,7 @@ package com.callscreen.app.feature.onboarding
 import android.Manifest
 import android.app.role.RoleManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Telephony
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.callscreen.app.R
 import com.callscreen.app.feature.main.MainActivity
 import com.callscreen.app.ui.theme.CallScreenTheme
+import com.callscreen.app.util.ScreenLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -124,6 +126,11 @@ class OnboardingActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 val roleManager = getSystemService(RoleManager::class.java)
+                if (roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)) {
+                    ScreenLog.d("Onboarding", "Call screening role already held, advancing")
+                    advanceToNextPage()
+                    return
+                }
                 val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
                 callScreeningLauncher.launch(intent)
             } catch (e: Exception) {
@@ -149,6 +156,17 @@ class OnboardingActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions += Manifest.permission.POST_NOTIFICATIONS
         }
+
+        val allGranted = permissions.all {
+            checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
+        }
+        if (allGranted) {
+            ScreenLog.d("Onboarding", "All permissions already granted, finishing onboarding")
+            finishOnboarding()
+            return
+        }
+
+        ScreenLog.d("Onboarding", "Requesting ${permissions.size} permissions")
         permissionLauncher.launch(permissions.toTypedArray())
     }
 

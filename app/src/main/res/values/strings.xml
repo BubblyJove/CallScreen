@@ -673,4 +673,10 @@
     <string name="settings_category_screening">Call Screening</string>
     <string name="crypto_settings_title">Crypto Challenge</string>
     <string name="crypto_settings_summary">Configure crypto payment challenges for unknown callers</string>
+
+    <string name="call_screening_settings_title">Call Screening</string>
+    <string name="call_screening_settings_summary">Configure call screening behavior</string>
+    <string name="call_screening_enabled_label">Enable Call Screening</string>
+    <string name="screen_unknown_only_label">Screen Unknown Callers Only</string>
+    <string name="math_challenge_enabled_label">Enable Math Challenge</string>
 </resources>

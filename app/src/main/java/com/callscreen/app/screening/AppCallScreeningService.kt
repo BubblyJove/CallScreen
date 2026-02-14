@@ -6,6 +6,7 @@ import com.callscreen.app.interactor.CheckNumberTrusted
 import com.callscreen.app.interactor.SendMathChallenge
 import com.callscreen.app.model.PendingScreenedMessage
 import com.callscreen.app.repository.ScreeningRepository
+import com.callscreen.app.util.Preferences
 import dagger.android.AndroidInjection
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.rxkotlin.plusAssign
@@ -26,6 +27,7 @@ class AppCallScreeningService : CallScreeningService() {
     @Inject lateinit var checkNumberTrusted: CheckNumberTrusted
     @Inject lateinit var sendMathChallenge: SendMathChallenge
     @Inject lateinit var screeningRepository: ScreeningRepository
+    @Inject lateinit var prefs: Preferences
 
     private val disposables = CompositeDisposable()
 
@@ -39,6 +41,12 @@ class AppCallScreeningService : CallScreeningService() {
 
         if (number.isNullOrBlank()) {
             Timber.w("No caller number — letting call through")
+            respondToCall(callDetails, ALLOW_RESPONSE)
+            return
+        }
+
+        if (!prefs.callScreeningEnabled.get()) {
+            Timber.d("Call screening disabled — allowing call from %s", number)
             respondToCall(callDetails, ALLOW_RESPONSE)
             return
         }
@@ -65,9 +73,11 @@ class AppCallScreeningService : CallScreeningService() {
                         type = PendingScreenedMessage.MessageType.CALL
                     )
 
-                    // Send math challenge
-                    sendMathChallenge.execute(SendMathChallenge.Params(number)) {
-                        Timber.d("Challenge sent for %s", number)
+                    // Send math challenge if enabled
+                    if (prefs.mathChallengeEnabled.get()) {
+                        sendMathChallenge.execute(SendMathChallenge.Params(number)) {
+                            Timber.d("Challenge sent for %s", number)
+                        }
                     }
                 }
             }, { error ->

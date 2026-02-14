@@ -41,7 +41,6 @@ import com.callscreen.app.feature.conversationinfo.injection.ConversationInfoCom
 import com.callscreen.app.feature.messageutils.MessageUtilsController
 import com.callscreen.app.feature.settings.SettingsController
 import com.callscreen.app.feature.settings.about.AboutController
-import com.callscreen.app.feature.settings.crypto.CryptoSettingsController
 import com.callscreen.app.feature.settings.swipe.SwipeActionsController
 import com.callscreen.app.feature.themepicker.injection.ThemePickerComponent
 import com.callscreen.app.feature.widget.WidgetAdapter
@@ -76,7 +75,6 @@ interface AppComponent {
     fun inject(controller: MessageUtilsController)
     fun inject(controller: SettingsController)
     fun inject(controller: SwipeActionsController)
-    fun inject(controller: CryptoSettingsController)
 
     fun inject(dialog: QkDialog)
 

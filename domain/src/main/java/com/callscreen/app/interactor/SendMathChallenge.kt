@@ -1,5 +1,6 @@
 package com.callscreen.app.interactor
 
+import com.callscreen.app.model.Attachment
 import com.callscreen.app.model.ChallengeState
 import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
@@ -21,7 +22,7 @@ class SendMathChallenge @Inject constructor(
 
     // Perf: cache empty list — avoid allocating a new emptyList() per invocation
     companion object {
-        private val EMPTY_ATTACHMENTS = emptyList<Any>()
+        private val EMPTY_ATTACHMENTS = emptyList<Attachment>()
     }
 
     override fun buildObservable(params: Params): Flowable<*> {

@@ -50,6 +50,7 @@ import com.callscreen.app.manager.BillingManager
 import com.callscreen.app.manager.NotificationManager
 import com.callscreen.app.manager.PermissionManager
 import com.callscreen.app.model.ScheduledMessage
+import com.callscreen.app.util.ScreenLog
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -196,7 +197,9 @@ class Navigator @Inject constructor(
     }
 
     fun showCryptoSettings() {
+        ScreenLog.d("Navigator", "showCryptoSettings() called")
         startActivity(Intent(context, CryptoSettingsActivity::class.java))
+        ScreenLog.d("Navigator", "showCryptoSettings() startActivity returned")
     }
 
     fun showCallScreeningSettings() {

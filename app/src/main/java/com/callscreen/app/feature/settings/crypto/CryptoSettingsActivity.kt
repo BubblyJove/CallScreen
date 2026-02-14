@@ -20,10 +20,13 @@ class CryptoSettingsActivity : QkActivity() {
     @Inject lateinit var cryptoRepository: CryptoRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ScreenLog.d("CryptoSettings", "onCreate starting")
         AndroidInjection.inject(this)
+        ScreenLog.d("CryptoSettings", "Injection complete")
         setTheme(R.style.AppTheme)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_crypto_settings)
+        ScreenLog.d("CryptoSettings", "Layout inflated")
 
         showBackButton(true)
         title = getString(R.string.crypto_settings_title)

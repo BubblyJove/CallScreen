@@ -32,6 +32,7 @@ import com.callscreen.app.manager.BillingManager
 import com.callscreen.app.repository.SyncRepository
 import com.callscreen.app.util.NightModeManager
 import com.callscreen.app.util.Preferences
+import com.callscreen.app.util.ScreenLog
 import io.reactivex.rxkotlin.plusAssign
 import timber.log.Timber
 import java.util.Calendar
@@ -156,10 +157,10 @@ class SettingsPresenter @Inject constructor(
 
         view.preferenceClicks()
                 .autoDispose(view.scope())
-                .subscribe {
-                    Timber.v("Preference click: ${context.resources.getResourceName(it.id)}")
+                .subscribe({ preference ->
+                    Timber.v("Preference click: ${context.resources.getResourceName(preference.id)}")
 
-                    when (it.id) {
+                    when (preference.id) {
                         R.id.theme -> view.showThemePicker()
 
                         R.id.night -> view.showNightModeDialog()
@@ -216,7 +217,15 @@ class SettingsPresenter @Inject constructor(
 
                         R.id.disableScreenshots -> prefs.disableScreenshots.set(!prefs.disableScreenshots.get())
 
-                        R.id.cryptoChallenge -> navigator.showCryptoSettings()
+                        R.id.cryptoChallenge -> {
+                            ScreenLog.d("Settings", "Crypto click received")
+                            try {
+                                navigator.showCryptoSettings()
+                            } catch (e: Exception) {
+                                Timber.e(e, "Failed to open crypto settings")
+                                ScreenLog.e("Settings", "Failed to open crypto settings", e)
+                            }
+                        }
 
                         R.id.callScreeningSettings -> navigator.showCallScreeningSettings()
 
@@ -224,7 +233,10 @@ class SettingsPresenter @Inject constructor(
 
                         R.id.about -> view.showAbout()
                     }
-                }
+                }, { error ->
+                    Timber.e(error, "Preference click error")
+                    ScreenLog.e("Settings", "Preference click error", error)
+                })
 
         view.aboutLongClicks()
                 .map { !prefs.logging.get() }

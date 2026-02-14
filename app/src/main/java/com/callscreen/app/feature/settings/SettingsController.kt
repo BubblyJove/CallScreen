@@ -89,6 +89,7 @@ class SettingsController : QkController<SettingsControllerBinding, SettingsView,
         retainViewMode = RetainViewMode.RETAIN_DETACH
 
         colors.themeObservable()
+                .skip(1)
                 .autoDispose(scope())
                 .subscribe { activity?.recreate() }
     }

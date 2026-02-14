@@ -38,6 +38,8 @@ interface ScreeningRepository {
 
     fun getChallengeForNumber(phoneNumber: String): ChallengeState?
 
+    fun getActiveChallenges(): RealmResults<ChallengeState>
+
     fun saveChallengeState(challenge: ChallengeState)
 
     fun deleteChallengeState(phoneNumber: String)
@@ -49,6 +51,8 @@ interface ScreeningRepository {
     fun getPendingMessages(): RealmResults<PendingScreenedMessage>
 
     fun getPendingMessagesForNumber(phoneNumber: String): RealmResults<PendingScreenedMessage>
+
+    fun getPendingMessagesForNumberSync(phoneNumber: String): List<PendingScreenedMessage>
 
     fun deliverPendingMessages(phoneNumber: String)
 

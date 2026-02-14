@@ -1,13 +1,15 @@
 package com.callscreen.app.interactor
 
 import com.callscreen.app.model.WhitelistedContact
+import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
 import io.reactivex.Flowable
 import timber.log.Timber
 import javax.inject.Inject
 
 class ValidateChallengeResponse @Inject constructor(
-    private val screeningRepository: ScreeningRepository
+    private val screeningRepository: ScreeningRepository,
+    private val messageRepository: MessageRepository
 ) : Interactor<ValidateChallengeResponse.Params>() {
 
     data class Params(val phoneNumber: String, val responseBody: String)
@@ -58,7 +60,13 @@ class ValidateChallengeResponse @Inject constructor(
                     WhitelistedContact.WhitelistSource.CHALLENGE_PASSED
                 )
 
-                // Deliver all pending messages
+                // Insert held messages into Quik DB so they appear in conversation history
+                val pending = screeningRepository.getPendingMessagesForNumberSync(params.phoneNumber)
+                pending.forEach { msg ->
+                    messageRepository.insertReceivedSms(-1, msg.phoneNumber, msg.body, msg.timestamp)
+                }
+
+                // Mark pending messages as delivered
                 screeningRepository.deliverPendingMessages(params.phoneNumber)
 
                 // Clean up challenge

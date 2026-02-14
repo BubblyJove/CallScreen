@@ -27,10 +27,13 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import dagger.android.AndroidInjection
+import com.callscreen.app.crypto.CryptoPriceOracle
 import com.callscreen.app.interactor.CheckNumberTrusted
+import com.callscreen.app.interactor.SendCryptoChallenge
 import com.callscreen.app.interactor.SendMathChallenge
 import com.callscreen.app.interactor.ValidateChallengeResponse
 import com.callscreen.app.model.PendingScreenedMessage
+import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
 import com.callscreen.app.worker.ReceiveSmsWorker
@@ -43,8 +46,11 @@ import javax.inject.Inject
 class SmsReceivedReceiver : BroadcastReceiver() {
     @Inject lateinit var messageRepo: MessageRepository
     @Inject lateinit var screeningRepository: ScreeningRepository
+    @Inject lateinit var cryptoRepository: CryptoRepository
     @Inject lateinit var checkNumberTrusted: CheckNumberTrusted
     @Inject lateinit var sendMathChallenge: SendMathChallenge
+    @Inject lateinit var sendCryptoChallenge: SendCryptoChallenge
+    @Inject lateinit var cryptoPriceOracle: CryptoPriceOracle
     @Inject lateinit var validateChallengeResponse: ValidateChallengeResponse
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -107,17 +113,29 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                             type = PendingScreenedMessage.MessageType.SMS
                         )
 
-                        // Still insert to Quik so it appears in conversation history
-                        val messageId = messageRepo.insertReceivedSms(subId, address, body, timestamp).id
+                        // Don't insert to Quik DB — screened messages stay hidden
+                        // until the sender passes verification
 
                         // Send challenge (don't fail if this errors)
                         try {
-                            sendMathChallenge.buildObservable(SendMathChallenge.Params(address)).blockingFirst()
+                            if (cryptoRepository.isCryptoChallengeEnabled()) {
+                                val ethPrice = cryptoPriceOracle.getEthPriceUsd()
+                                if (ethPrice != null) {
+                                    sendCryptoChallenge.buildObservable(
+                                        SendCryptoChallenge.Params(address, ethPrice)
+                                    ).blockingFirst()
+                                } else {
+                                    // Fallback to math if price fetch fails
+                                    sendMathChallenge.buildObservable(SendMathChallenge.Params(address)).blockingFirst()
+                                }
+                            } else {
+                                sendMathChallenge.buildObservable(SendMathChallenge.Params(address)).blockingFirst()
+                            }
                         } catch (e: Exception) {
                             Timber.w(e, "Failed to send challenge to $address")
                         }
 
-                        messageId
+                        0L
                     } catch (e: Exception) {
                         // Fail-open: on any screening error, insert to Quik normally
                         Timber.w(e, "Screening error for $address — fail-open, inserting normally")

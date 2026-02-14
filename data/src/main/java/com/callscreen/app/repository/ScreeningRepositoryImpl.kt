@@ -94,6 +94,14 @@ class ScreeningRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getActiveChallenges(): RealmResults<ChallengeState> {
+        return Realm.getDefaultInstance()
+            .where(ChallengeState::class.java)
+            .greaterThan("expiresAt", System.currentTimeMillis())
+            .sort("createdAt", io.realm.Sort.DESCENDING)
+            .findAllAsync()
+    }
+
     override fun saveChallengeState(challenge: ChallengeState) {
         Realm.getDefaultInstance().use { realm ->
             realm.executeTransaction { r ->
@@ -173,6 +181,17 @@ class ScreeningRepositoryImpl @Inject constructor(
             .equalTo("statusString", PendingScreenedMessage.MessageStatus.HELD.name)
             .sort("timestamp", io.realm.Sort.ASCENDING)
             .findAllAsync()
+    }
+
+    override fun getPendingMessagesForNumberSync(phoneNumber: String): List<PendingScreenedMessage> {
+        return Realm.getDefaultInstance().use { realm ->
+            val results = realm.where(PendingScreenedMessage::class.java)
+                .equalTo("phoneNumber", phoneNumber)
+                .equalTo("statusString", PendingScreenedMessage.MessageStatus.HELD.name)
+                .sort("timestamp", io.realm.Sort.ASCENDING)
+                .findAll()
+            realm.copyFromRealm(results)
+        }
     }
 
     override fun deliverPendingMessages(phoneNumber: String) {

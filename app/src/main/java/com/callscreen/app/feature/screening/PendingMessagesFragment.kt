@@ -45,6 +45,7 @@ class PendingMessagesFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(context)
 
         pendingMessages = screeningRepository.getPendingMessages()
+        recyclerView.adapter = PendingMessageAdapter(pendingMessages!!)
         pendingMessages?.addChangeListener { results ->
             if (results.isEmpty()) {
                 recyclerView.visibility = View.GONE

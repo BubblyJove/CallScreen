@@ -631,6 +631,7 @@
     <string name="screening_no_pending">No pending messages</string>
     <string name="screening_no_whitelist">No whitelisted contacts</string>
     <string name="screening_no_challenges">No active challenges</string>
+    <string name="screening_challenge_expires">Expires: %s</string>
 
     <string name="drawer_screening">Call Screening</string>
     <string name="drawer_crypto">Crypto Challenge</string>

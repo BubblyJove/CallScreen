@@ -1,5 +1,6 @@
 package com.callscreen.app.interactor
 
+import com.callscreen.app.model.ChallengeState
 import com.callscreen.app.model.CryptoPaymentChallenge
 import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.repository.MessageRepository
@@ -46,6 +47,19 @@ class SendCryptoChallenge @Inject constructor(
                 exactAmount = exactAmount
             )
 
+            // Save ChallengeState so screening tabs and ValidateChallengeResponse can find it
+            val now = System.currentTimeMillis()
+            val challengeState = ChallengeState().apply {
+                this.phoneNumber = params.phoneNumber
+                this.challengeQuestion = "Send $exactAmount ${tokenType.name} to $walletAddress"
+                this.expectedAnswer = exactAmount
+                this.createdAt = now
+                this.expiresAt = now + CryptoPaymentChallenge.TTL_MS
+                this.attempts = 0
+                this.type = ChallengeState.ChallengeType.CRYPTO
+            }
+            screeningRepository.saveChallengeState(challengeState)
+
             sendChallengeMessage(params.phoneNumber, challenge)
 
             Timber.d("Sent crypto challenge to ${params.phoneNumber}: $exactAmount ${tokenType.name} to $walletAddress")
@@ -84,20 +98,22 @@ class SendCryptoChallenge @Inject constructor(
          * Example: $0.20 → 0.20 + nonce → "0.200847"
          */
         fun generateExactAmount(usdCents: Int, ethPriceUsd: Double, tokenType: CryptoPaymentChallenge.TokenType): String {
-            val nonce = (100000..999999).random()
+            // Randomize within ±0.05 cents of the configured fee for uniqueness
+            val jitterCents = (Math.random() - 0.5) * 0.001 // ±$0.0005
+            val usdAmount = usdCents / 100.0 + jitterCents
+            val nonce = (1000..9999).random()
 
             return when (tokenType) {
                 CryptoPaymentChallenge.TokenType.ETH -> {
-                    val usdAmount = usdCents / 100.0
                     val ethAmount = usdAmount / ethPriceUsd
-                    // Format with high precision, append nonce
-                    val baseStr = String.format("%.6f", ethAmount)
+                    // Format with high precision, append nonce digits
+                    val baseStr = String.format("%.8f", ethAmount)
                     "${baseStr}${nonce}"
                 }
                 CryptoPaymentChallenge.TokenType.USDC,
                 CryptoPaymentChallenge.TokenType.USDT -> {
-                    val usdAmount = usdCents / 100.0
-                    val baseStr = String.format("%.2f", usdAmount)
+                    // Format with 4 decimal places, append nonce
+                    val baseStr = String.format("%.4f", usdAmount)
                     "${baseStr}${nonce}"
                 }
             }

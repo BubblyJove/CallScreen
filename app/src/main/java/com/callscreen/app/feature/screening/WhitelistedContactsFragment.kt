@@ -45,6 +45,7 @@ class WhitelistedContactsFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(context)
 
         contacts = screeningRepository.getWhitelistedContacts()
+        recyclerView.adapter = WhitelistedContactAdapter(contacts!!)
         contacts?.addChangeListener { results ->
             if (results.isEmpty()) {
                 recyclerView.visibility = View.GONE

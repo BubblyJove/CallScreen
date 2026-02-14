@@ -17,6 +17,7 @@
     <!-- Call screening + contacts -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
 
@@ -117,6 +118,9 @@
         <activity android:name=".feature.scheduled.ScheduledActivity" />
         <activity android:name=".feature.backup.BackupActivity" />
         <activity android:name=".feature.contacts.ContactsActivity" />
+
+        <!-- CallScreen: Onboarding -->
+        <activity android:name=".feature.onboarding.OnboardingActivity" />
 
         <!-- CallScreen: Screening Dashboard -->
         <activity android:name=".feature.screening.ScreeningActivity" />

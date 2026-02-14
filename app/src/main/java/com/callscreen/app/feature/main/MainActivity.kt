@@ -49,6 +49,7 @@ import dagger.android.AndroidInjection
 import com.callscreen.app.R
 import com.callscreen.app.common.Navigator
 import com.callscreen.app.common.androidxcompat.drawerOpen
+import com.callscreen.app.feature.onboarding.OnboardingActivity
 import com.callscreen.app.common.base.QkThemedActivity
 import com.callscreen.app.common.util.extensions.autoScrollToStart
 import com.callscreen.app.common.util.extensions.dismissKeyboard
@@ -146,6 +147,13 @@ class MainActivity : QkThemedActivity(), MainView {
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
+
+        if (!prefs.onboardingComplete.get()) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
+
         binding = MainActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         viewModel.bindView(this)
@@ -430,7 +438,10 @@ class MainActivity : QkThemedActivity(), MainView {
         val permissions = mutableListOf(
             Manifest.permission.READ_SMS,
             Manifest.permission.SEND_SMS,
-            Manifest.permission.READ_CONTACTS
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.ANSWER_PHONE_CALLS
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)

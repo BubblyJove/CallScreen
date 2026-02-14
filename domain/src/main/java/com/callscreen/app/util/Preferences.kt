@@ -87,6 +87,7 @@ class Preferences @Inject constructor(
     }
 
     // Internal
+    val onboardingComplete = rxPrefs.getBoolean("onboardingComplete", false)
     val didSetReferrer = rxPrefs.getBoolean("didSetReferrer", false)
     val night = rxPrefs.getBoolean("night", false)
     val canUseSubId = rxPrefs.getBoolean("canUseSubId", true)

@@ -6,13 +6,13 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.TextView
 import com.callscreen.app.R
-import com.callscreen.app.common.base.QkThemedActivity
+import com.callscreen.app.common.base.QkActivity
 import com.callscreen.app.util.ScreenLog
 import dagger.android.AndroidInjection
 import java.util.Timer
 import java.util.TimerTask
 
-class DebugActivity : QkThemedActivity() {
+class DebugActivity : QkActivity() {
 
     private lateinit var logTextView: TextView
     private var refreshTimer: Timer? = null
@@ -22,9 +22,8 @@ class DebugActivity : QkThemedActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.debug_activity)
 
-        setSupportActionBar(findViewById(R.id.toolbar))
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = getString(R.string.debug_title)
+        showBackButton(true)
+        title = getString(R.string.debug_title)
 
         logTextView = findViewById(R.id.logText)
         logTextView.movementMethod = ScrollingMovementMethod()
@@ -61,10 +60,6 @@ class DebugActivity : QkThemedActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-        android.R.id.home -> {
-            onBackPressed()
-            true
-        }
         MENU_COPY -> {
             val clipboard = getSystemService(android.content.ClipboardManager::class.java)
             clipboard?.setPrimaryClip(

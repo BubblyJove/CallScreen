@@ -47,6 +47,7 @@ import com.callscreen.app.feature.themepicker.injection.ThemePickerComponent
 import com.callscreen.app.feature.widget.WidgetAdapter
 import com.callscreen.app.injection.android.ActivityBuilderModule
 import com.callscreen.app.injection.android.BroadcastReceiverBuilderModule
+import com.callscreen.app.injection.android.FragmentBuilderModule
 import com.callscreen.app.injection.android.ServiceBuilderModule
 import javax.inject.Singleton
 
@@ -56,6 +57,7 @@ import javax.inject.Singleton
     AppModule::class,
     ActivityBuilderModule::class,
     BroadcastReceiverBuilderModule::class,
+    FragmentBuilderModule::class,
     ServiceBuilderModule::class])
 interface AppComponent {
 

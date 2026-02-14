@@ -42,12 +42,10 @@ object ScreenLog {
     }
 
     fun e(tag: String, message: String, throwable: Throwable? = null) {
-        // Perf: build error message only if throwable is non-null, avoiding
-        // string template allocation in the common (no-throwable) path
+        // Build error message without shared lineBuilder to avoid race condition
+        // (lineBuilder is also used inside addEntry's synchronized block)
         val fullMessage = if (throwable != null) {
-            lineBuilder.clear()
-            lineBuilder.append(message).append(": ").append(throwable.message)
-            lineBuilder.toString()
+            "$message: ${throwable.message}"
         } else {
             message
         }

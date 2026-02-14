@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
@@ -43,21 +44,45 @@ import androidx.compose.ui.unit.dp
 import com.callscreen.app.R
 import com.callscreen.app.feature.main.MainActivity
 import com.callscreen.app.ui.theme.CallScreenTheme
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 class OnboardingActivity : ComponentActivity() {
 
+    // Compose pager state + scope are bridged via these fields, set in setContent
+    private var pagerState: PagerState? = null
+    private var scope: CoroutineScope? = null
+
+    private fun advanceToNextPage() {
+        val state = pagerState ?: return
+        val s = scope ?: return
+        if (state.currentPage < PAGE_COUNT - 1) {
+            s.launch { state.animateScrollToPage(state.currentPage + 1) }
+        }
+    }
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { /* results handled implicitly — user sees grant dialog */ }
+    ) { results ->
+        // Advance if at least one permission was granted
+        if (results.values.any { it }) {
+            advanceToNextPage()
+        }
+    }
 
     private val defaultSmsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { /* result handled implicitly */ }
+    ) {
+        // User returned from default SMS dialog — advance regardless of result
+        // (they saw the prompt and made a choice)
+        advanceToNextPage()
+    }
 
     private val callScreeningLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { /* result handled implicitly */ }
+    ) {
+        advanceToNextPage()
+    }
 
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,7 +90,16 @@ class OnboardingActivity : ComponentActivity() {
 
         setContent {
             CallScreenTheme {
+                val pState = rememberPagerState(pageCount = { PAGE_COUNT })
+                val cScope = rememberCoroutineScope()
+
+                // Bridge Compose state to Activity fields for callback access
+                pagerState = pState
+                scope = cScope
+
                 OnboardingScreen(
+                    pagerState = pState,
+                    scope = cScope,
                     onSetDefaultSms = ::requestDefaultSms,
                     onEnableCallScreening = ::requestCallScreening,
                     onGrantPermissions = ::requestPermissions,
@@ -95,7 +129,12 @@ class OnboardingActivity : ComponentActivity() {
                 callScreeningLauncher.launch(intent)
             } catch (e: Exception) {
                 timber.log.Timber.w(e, "Failed to request call screening role")
+                // Advance anyway so the user isn't stuck
+                advanceToNextPage()
             }
+        } else {
+            // Pre-Q: call screening role not available, just advance
+            advanceToNextPage()
         }
     }
 
@@ -121,20 +160,22 @@ class OnboardingActivity : ComponentActivity() {
         startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
+
+    companion object {
+        private const val PAGE_COUNT = 4
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun OnboardingScreen(
+    pagerState: PagerState,
+    scope: CoroutineScope,
     onSetDefaultSms: () -> Unit,
     onEnableCallScreening: () -> Unit,
     onGrantPermissions: () -> Unit,
     onFinish: () -> Unit
 ) {
-    val pageCount = 4
-    val pagerState = rememberPagerState(pageCount = { pageCount })
-    val scope = rememberCoroutineScope()
-
     Column(modifier = Modifier.fillMaxSize()) {
         HorizontalPager(
             state = pagerState,
@@ -186,7 +227,7 @@ private fun OnboardingScreen(
 
             // Page indicators
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(pageCount) { index ->
+                repeat(pagerState.pageCount) { index ->
                     val color = if (index == pagerState.currentPage)
                         MaterialTheme.colorScheme.primary
                     else
@@ -203,7 +244,7 @@ private fun OnboardingScreen(
                 }
             }
 
-            if (pagerState.currentPage < pageCount - 1) {
+            if (pagerState.currentPage < pagerState.pageCount - 1) {
                 TextButton(onClick = {
                     scope.launch {
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)

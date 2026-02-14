@@ -656,15 +656,15 @@
 
     <!-- Onboarding -->
     <string name="onboarding_welcome_title">Welcome to CallScreen</string>
-    <string name="onboarding_welcome_desc">Screen unknown calls and SMS messages with math challenges and crypto payment verification.</string>
-    <string name="onboarding_sms_title">Default SMS App</string>
-    <string name="onboarding_sms_desc">CallScreen needs to be your default SMS app to receive messages and send challenges to unknown contacts.</string>
+    <string name="onboarding_welcome_desc">Stop spam calls and texts automatically. Unknown callers and texters must solve a quick challenge before they can reach you — only real people get through.</string>
+    <string name="onboarding_sms_title">Handle Your Texts</string>
+    <string name="onboarding_sms_desc">To block spam texts and send challenges to unknown senders, CallScreen needs to be your default texting app. Your existing conversations will stay right where they are.</string>
     <string name="onboarding_sms_button">Set as Default SMS</string>
-    <string name="onboarding_screening_title">Call Screening</string>
-    <string name="onboarding_screening_desc">Allow CallScreen to screen incoming calls so unknown callers can be challenged before reaching you.</string>
+    <string name="onboarding_screening_title">Screen Your Calls</string>
+    <string name="onboarding_screening_desc">Let CallScreen answer unknown calls for you. Callers not in your contacts will be asked to prove they\'re human before your phone ever rings.</string>
     <string name="onboarding_screening_button">Enable Call Screening</string>
-    <string name="onboarding_permissions_title">Permissions</string>
-    <string name="onboarding_permissions_desc">CallScreen needs access to SMS, contacts, phone state, and notifications to function properly.</string>
+    <string name="onboarding_permissions_title">A Few Permissions</string>
+    <string name="onboarding_permissions_desc">CallScreen needs to read texts, see who\'s calling, and check your contacts to tell the difference between people you know and strangers. We never share your data.</string>
     <string name="onboarding_permissions_button">Grant Permissions</string>
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_next">Next</string>

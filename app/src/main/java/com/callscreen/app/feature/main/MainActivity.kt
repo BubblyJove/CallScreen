@@ -165,8 +165,10 @@ class MainActivity : QkThemedActivity(), MainView {
         }
 
         syncingBinding = MainSyncingBinding.bind(binding.syncing.inflate()).also {
-            it.syncingProgress.progressTintList = ColorStateList.valueOf(theme.blockingFirst().theme)
-            it.syncingProgress.indeterminateTintList = ColorStateList.valueOf(theme.blockingFirst().theme)
+            // Use cached theme color instead of blockingFirst() to avoid blocking main thread
+            val initialColor = colors.theme().theme
+            it.syncingProgress.progressTintList = ColorStateList.valueOf(initialColor)
+            it.syncingProgress.indeterminateTintList = ColorStateList.valueOf(initialColor)
         }
 
         toggle.syncState()

@@ -29,6 +29,7 @@
         <item name="android:navigationBarColor">@color/backgroundDark</item>
         <item name="android:statusBarColor">@color/backgroundDark</item>
         <item name="android:windowBackground">@color/backgroundDark</item>
+        <item name="colorOnPrimary">@android:color/white</item>
     </style>
 
     <style name="AppTheme" parent="AppBaseTheme">
@@ -54,6 +55,8 @@
         <item name="switchThumbDisabled">@color/switchThumbDisabledLight</item>
         <item name="switchTrackEnabled">@color/switchTrackEnabledLight</item>
         <item name="switchTrackDisabled">@color/switchTrackDisabledLight</item>
+        <item name="colorOnPrimary">@color/text_primary</item>
+        <item name="textAppearanceSubtitle1">@style/TextAppearance.AppCompat.Subhead</item>
         <item name="windowActionBar">false</item>
     </style>
 

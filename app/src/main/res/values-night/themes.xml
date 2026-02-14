@@ -42,6 +42,8 @@
         <item name="switchThumbDisabled">@color/switchThumbDisabledDark</item>
         <item name="switchTrackEnabled">@color/switchTrackEnabledDark</item>
         <item name="switchTrackDisabled">@color/switchTrackDisabledDark</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="textAppearanceSubtitle1">@style/TextAppearance.AppCompat.Subhead</item>
         <item name="windowActionBar">false</item>
     </style>
 

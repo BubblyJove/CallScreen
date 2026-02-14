@@ -78,6 +78,7 @@ class QKApplication : Application(), HasAndroidInjector {
                 .compactOnLaunch()
                 .migration(realmMigration)
                 .schemaVersion(QkRealmMigration.SCHEMA_VERSION)
+                .deleteRealmIfMigrationNeeded()
                 .build())
 
         qkMigration.performMigration()

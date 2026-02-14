@@ -109,6 +109,9 @@
 -keep class * extends androidx.work.Worker { *; }
 -keep class * extends androidx.work.ListenableWorker { *; }
 
+# SLF4J (referenced by some libs but not shipped at runtime)
+-dontwarn org.slf4j.**
+
 # Kotlin
 -dontwarn kotlin.**
 -keep class kotlin.Metadata { *; }

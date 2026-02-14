@@ -89,10 +89,10 @@
     public *;
 }
 
-# Web3j (large; keep only what's needed)
--dontwarn org.web3j.**
--keep class org.web3j.abi.** { *; }
--keep class org.web3j.protocol.** { *; }
+# Web3j removed — crypto challenges use raw JSON-RPC via OkHttp
+# -dontwarn org.web3j.**
+# -keep class org.web3j.abi.** { *; }
+# -keep class org.web3j.protocol.** { *; }
 
 # ezvcard
 -dontwarn ezvcard.**

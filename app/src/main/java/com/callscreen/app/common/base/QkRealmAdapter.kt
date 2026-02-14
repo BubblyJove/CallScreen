@@ -50,7 +50,9 @@ abstract class QkRealmAdapter<T : RealmModel, VH : QkViewHolder> : RealmRecycler
 
     val selectionChanges: Subject<List<Long>> = BehaviorSubject.create()
 
-    private var selection = mutableListOf<Long>()
+    // Perf: LinkedHashSet gives O(1) contains/add/remove vs MutableList's O(n),
+    // while preserving insertion order for the emitted List<Long>
+    private var selection = LinkedHashSet<Long>()
 
     /**
      * Mark this message as highlighted
@@ -72,12 +74,11 @@ abstract class QkRealmAdapter<T : RealmModel, VH : QkViewHolder> : RealmRecycler
     protected fun toggleSelection(id: Long, force: Boolean = true): Boolean {
         if (!force && selection.isEmpty()) return false
 
-        when (selection.contains(id)) {
-            true -> selection -= id
-            false -> selection += id
+        if (!selection.remove(id)) {
+            selection.add(id)
         }
 
-        selectionChanges.onNext(selection)
+        selectionChanges.onNext(selection.toList())
 
         return true
     }
@@ -88,7 +89,7 @@ abstract class QkRealmAdapter<T : RealmModel, VH : QkViewHolder> : RealmRecycler
 
     fun clearSelection() {
         selection.clear()
-        selectionChanges.onNext(selection)
+        selectionChanges.onNext(emptyList())
         notifyDataSetChanged()
     }
 
@@ -99,11 +100,11 @@ abstract class QkRealmAdapter<T : RealmModel, VH : QkViewHolder> : RealmRecycler
 
         if (needToSelectAll) {
             for (position in 0 until itemCount)
-                selection += getItemId(position)
+                selection.add(getItemId(position))
             }
 
         // fire a single change event now
-        selectionChanges.onNext(selection)
+        selectionChanges.onNext(selection.toList())
 
         notifyDataSetChanged()
     }

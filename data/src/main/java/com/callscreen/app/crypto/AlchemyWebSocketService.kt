@@ -291,54 +291,60 @@ class AlchemyWebSocketService @Inject constructor(
     /**
      * Get confirmation count via JSON-RPC over HTTPS.
      */
+    /**
+     * Perf: use JSON-RPC batch request to fetch both eth_getTransactionReceipt and
+     * eth_blockNumber in a single HTTP round-trip, saving ~100-300ms of network latency
+     * per poll cycle (called every 15s per active payment monitor).
+     */
     private fun getConfirmationCount(txHash: String): Int {
         val apiKey = cryptoRepository.getAlchemyApiKey()
         val url = "https://eth-mainnet.g.alchemy.com/v2/$apiKey"
 
-        val requestBody = JSONObject().apply {
-            put("jsonrpc", "2.0")
-            put("id", 1)
-            put("method", "eth_getTransactionReceipt")
-            put("params", JSONArray().apply { put(txHash) })
+        // Build JSON-RPC batch: [getTransactionReceipt, blockNumber]
+        val batchBody = JSONArray().apply {
+            put(JSONObject().apply {
+                put("jsonrpc", "2.0")
+                put("id", 1)
+                put("method", "eth_getTransactionReceipt")
+                put("params", JSONArray().apply { put(txHash) })
+            })
+            put(JSONObject().apply {
+                put("jsonrpc", "2.0")
+                put("id", 2)
+                put("method", "eth_blockNumber")
+                put("params", JSONArray())
+            })
         }
 
         val httpRequest = Request.Builder()
             .url(url)
             .post(okhttp3.RequestBody.create(
                 "application/json".toMediaTypeOrNull(),
-                requestBody.toString()
+                batchBody.toString()
             ))
             .build()
 
         val response = httpClient.newCall(httpRequest).execute()
         val body = response.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return -1
-        val json = JSONObject(body)
-        val result = json.optJSONObject("result") ?: return -1
+        val batchResponse = JSONArray(body)
 
-        val blockNumberHex = result.optString("blockNumber", "")
-        if (blockNumberHex.isBlank()) return 0
-
-        // Get current block number
-        val blockRequest = JSONObject().apply {
-            put("jsonrpc", "2.0")
-            put("id", 2)
-            put("method", "eth_blockNumber")
-            put("params", JSONArray())
+        // Parse responses by id
+        var blockNumberHex = ""
+        var currentBlockHex = ""
+        for (i in 0 until batchResponse.length()) {
+            val item = batchResponse.getJSONObject(i)
+            when (item.optInt("id")) {
+                1 -> {
+                    val result = item.optJSONObject("result") ?: return -1
+                    blockNumberHex = result.optString("blockNumber", "")
+                }
+                2 -> {
+                    currentBlockHex = item.optString("result", "")
+                }
+            }
         }
 
-        val blockHttpRequest = Request.Builder()
-            .url(url)
-            .post(okhttp3.RequestBody.create(
-                "application/json".toMediaTypeOrNull(),
-                blockRequest.toString()
-            ))
-            .build()
-
-        val blockResponse = httpClient.newCall(blockHttpRequest).execute()
-        val blockBody = blockResponse.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return -1
-        val blockJson = JSONObject(blockBody)
-        val currentBlockHex = blockJson.optString("result", "")
-
+        if (blockNumberHex.isBlank()) return 0
         if (currentBlockHex.isBlank()) return -1
 
         val txBlock = try { BigInteger(blockNumberHex.removePrefix("0x").ifBlank { "0" }, 16) } catch (e: NumberFormatException) { return -1 }

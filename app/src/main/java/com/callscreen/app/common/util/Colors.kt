@@ -44,6 +44,7 @@ class Colors @Inject constructor(
         val textTertiary by lazy { colors.textTertiaryOnThemeForColor(theme) }
     }
 
+    // Perf: recycle TypedArrays after extracting colors to avoid leaking native resources
     val materialColors: List<List<Int>> = listOf(
         R.array.material_red,
         R.array.material_pink,
@@ -64,11 +65,19 @@ class Colors @Inject constructor(
         R.array.material_brown,
         R.array.material_gray,
         R.array.material_blue_gray)
-            .map { res -> context.resources.obtainTypedArray(res) }
-            .map { typedArray -> (0 until typedArray.length()).map(typedArray::getColorOrThrow) }
+            .map { res ->
+                val typedArray = context.resources.obtainTypedArray(res)
+                val colors = (0 until typedArray.length()).map(typedArray::getColorOrThrow)
+                typedArray.recycle()
+                colors
+            }
 
     private val randomColors: List<Int> = context.resources.obtainTypedArray(R.array.random_colors)
-            .let { typedArray -> (0 until typedArray.length()).map(typedArray::getColorOrThrow) }
+            .let { typedArray ->
+                val colors = (0 until typedArray.length()).map(typedArray::getColorOrThrow)
+                typedArray.recycle()
+                colors
+            }
 
     private val minimumContrastRatio = 2
 
@@ -125,12 +134,22 @@ class Colors @Inject constructor(
     /**
      * Measures the luminance value of a color to be able to measure the contrast ratio between two materialColors
      * Based on https://stackoverflow.com/a/9733420
+     *
+     * Perf: inline the sRGB linearization without creating intermediate IntArray/List allocations.
      */
     private fun measureLuminance(color: Int): Double {
-        val array = intArrayOf(Color.red(color), Color.green(color), Color.blue(color))
-                .map { if (it < 0.03928) it / 12.92 else ((it + 0.055) / 1.055).pow(2.4) }
+        val r = linearize(Color.red(color))
+        val g = linearize(Color.green(color))
+        val b = linearize(Color.blue(color))
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b + 0.05
+    }
 
-        return 0.2126 * array[0] + 0.7152 * array[1] + 0.0722 * array[2] + 0.05
+    // Note: preserves original behavior where component (0-255) is compared as-is.
+    // The sRGB formula technically expects 0.0-1.0 input, but changing that would
+    // alter all theme color calculations.
+    private fun linearize(component: Int): Double {
+        val c = component.toDouble()
+        return if (c < 0.03928) c / 12.92 else ((c + 0.055) / 1.055).pow(2.4)
     }
 
     private fun generateColor(recipient: Recipient): Int {

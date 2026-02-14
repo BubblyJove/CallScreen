@@ -38,8 +38,11 @@ abstract class QkActivity : AppCompatActivity() {
 
     protected val menu: Subject<Menu> = BehaviorSubject.create()
 
-    protected val toolbar: Toolbar? get() = findViewById(R.id.toolbar)
-    protected val toolbarTitle: TextView? get() = findViewById(R.id.toolbarTitle)
+    // Perf: cache view lookups instead of calling findViewById on every access
+    protected var toolbar: Toolbar? = null
+        private set
+    protected var toolbarTitle: TextView? = null
+        private set
 
     @SuppressLint("InlinedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,14 +68,23 @@ abstract class QkActivity : AppCompatActivity() {
 
     override fun setContentView(layoutResID: Int) {
         super.setContentView(layoutResID)
+        cacheViews()
         setSupportActionBar(toolbar)
         title = title // The title may have been set before layout inflation
     }
 
     override fun setContentView(view: View?) {
         super.setContentView(view)
+        cacheViews()
         setSupportActionBar(toolbar)
         title = title // The title may have been set before layout inflation
+    }
+
+    // Perf: cache toolbar and title views once after setContentView, avoiding
+    // repeated findViewById traversals on every property access
+    private fun cacheViews() {
+        toolbar = findViewById(R.id.toolbar)
+        toolbarTitle = findViewById(R.id.toolbarTitle)
     }
 
     override fun setTitle(titleId: Int) {

@@ -176,8 +176,9 @@ dependencies {
     // Phone number formatting
     implementation("io.michaelrocks:libphonenumber-android:8.13.27")
 
-    // Web3j (for crypto challenges)
-    implementation("org.web3j:core:4.10.3")
+    // Perf: web3j removed — crypto challenge uses raw JSON-RPC via OkHttp WebSocket.
+    // web3j pulled in ~5MB of unused classes (Solidity codegen, ABI, full Ethereum client).
+    // implementation("org.web3j:core:4.10.3")
 
     // Realm Adapters
     implementation("com.github.realm:realm-android-adapters:3.1.0")
@@ -203,6 +204,10 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    // Perf: material-icons-extended adds ~30MB debug / ~5MB release APK size.
+    // TODO: Replace with XML vector drawables for the ~15 icons actually used
+    // (Shield, Forum, HourglassBottom, PhoneForwarded, BugReport, etc.) and remove
+    // this dependency. R8 cannot tree-shake it effectively.
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.navigation:navigation-compose:2.7.6")

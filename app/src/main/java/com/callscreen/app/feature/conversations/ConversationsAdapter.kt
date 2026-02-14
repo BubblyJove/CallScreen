@@ -22,7 +22,6 @@ import android.content.Context
 import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.text.buildSpannedString
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.callscreen.app.R
@@ -38,6 +37,7 @@ import com.callscreen.app.model.Conversation
 import com.callscreen.app.repository.ScheduledMessageRepository
 import com.callscreen.app.util.PhoneNumberUtils
 import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.disposables.Disposable
 import javax.inject.Inject
 
 class ConversationsAdapter @Inject constructor(
@@ -49,6 +49,9 @@ class ConversationsAdapter @Inject constructor(
     private val phoneNumberUtils: PhoneNumberUtils
 ) : QkRealmAdapter<Conversation, QkBindingViewHolder<ConversationListItemBinding>>() {
     private val disposables = CompositeDisposable()
+    // Perf: track per-holder disposable so we dispose when the ViewHolder is rebound or recycled,
+    // instead of leaking O(scroll-distance) Realm subscriptions until detach.
+    private val holderDisposables = HashMap<RecyclerView.ViewHolder, Disposable>()
 
     init {
         // This is how we access the threadId for the swipe actions
@@ -109,9 +112,8 @@ class ConversationsAdapter @Inject constructor(
 
         binding.avatars.recipients = conversation.recipients
         binding.title.collapseEnabled = conversation.recipients.size > 1
-        binding.title.text = buildSpannedString {
-            append(conversation.getTitle())
-        }
+        // Perf: getTitle() returns plain text; no need for SpannableStringBuilder allocation
+        binding.title.text = conversation.getTitle()
         binding.date.text = conversation.date.takeIf { it > 0 }?.let(dateFormatter::getConversationTimestamp)
         binding.snippet.text = when {
             conversation.draft.isNotEmpty() -> context.getString(R.string.main_sender_draft, conversation.draft)
@@ -122,7 +124,9 @@ class ConversationsAdapter @Inject constructor(
         // Make the preview in italics if draft
         if (conversation.draft.isNotEmpty()) binding.snippet.setTypeface(null, Typeface.ITALIC)
 
-        // Get Scheduled Messages
+        // Perf: dispose previous subscription for this ViewHolder before creating a new one.
+        // Without this, each rebind leaks an additional Realm async query subscription.
+        holderDisposables.remove(holder)?.dispose()
         val disposable = scheduledMessageRepo
             .getScheduledMessagesForConversation(conversation.id)
             .asFlowable()
@@ -130,6 +134,7 @@ class ConversationsAdapter @Inject constructor(
             .subscribe { messages ->
                 binding.scheduled.isVisible = messages.isNotEmpty()
             }
+        holderDisposables[holder] = disposable
         disposables.add(disposable)
 
         binding.pinned.isVisible = conversation.pinned
@@ -144,8 +149,15 @@ class ConversationsAdapter @Inject constructor(
         return if (getItem(position)?.unread == false) 0 else 1
     }
 
+    // Perf: clean up per-holder subscription when the ViewHolder is recycled
+    override fun onViewRecycled(holder: QkBindingViewHolder<ConversationListItemBinding>) {
+        super.onViewRecycled(holder)
+        holderDisposables.remove(holder)?.dispose()
+    }
+
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         super.onDetachedFromRecyclerView(recyclerView)
+        holderDisposables.clear()
         disposables.clear()
     }
 

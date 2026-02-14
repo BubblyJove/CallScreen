@@ -49,12 +49,13 @@ class CryptoRepositoryImpl @Inject constructor(
 
     override fun getActivePaymentChallenge(phoneNumber: String): CryptoPaymentChallenge? {
         return Realm.getDefaultInstance().use { realm ->
+            // Perf: use `in()` instead of `or()` with repeated equalTo — single index scan
             realm.where(CryptoPaymentChallenge::class.java)
                 .equalTo("phoneNumber", phoneNumber)
-                .equalTo("statusString", CryptoPaymentChallenge.PaymentStatus.PENDING.name)
-                .or()
-                .equalTo("phoneNumber", phoneNumber)
-                .equalTo("statusString", CryptoPaymentChallenge.PaymentStatus.CONFIRMING.name)
+                .`in`("statusString", arrayOf(
+                    CryptoPaymentChallenge.PaymentStatus.PENDING.name,
+                    CryptoPaymentChallenge.PaymentStatus.CONFIRMING.name
+                ))
                 .findFirst()
                 ?.let { realm.copyFromRealm(it) }
         }

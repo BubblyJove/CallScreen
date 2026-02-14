@@ -121,7 +121,9 @@ abstract class QkThemedActivity : QkActivity() {
 
         // Set the color for the recent apps title
         val toolbarColor = resolveThemeColor(R.attr.colorPrimary)
-        val icon = BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
+        // Perf: cache decoded launcher icon — it never changes at runtime and
+        // BitmapFactory.decodeResource costs ~5-20ms per call
+        val icon = launcherIcon ?: BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher).also { launcherIcon = it }
         val taskDesc = ActivityManager.TaskDescription(getString(R.string.app_name), icon, toolbarColor)
         setTaskDescription(taskDesc)
     }
@@ -158,4 +160,8 @@ abstract class QkThemedActivity : QkActivity() {
         else -> R.style.AppTheme
     }
 
+    companion object {
+        // Perf: static cache for decoded launcher icon bitmap, shared across all themed activities
+        private var launcherIcon: android.graphics.Bitmap? = null
+    }
 }

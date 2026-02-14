@@ -7,16 +7,20 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.callscreen.app.R
 import com.callscreen.app.model.ChallengeState
-import io.realm.OrderedRealmCollection
-import io.realm.RealmRecyclerViewAdapter
 import java.text.DateFormat
 import java.util.Date
 
-class ChallengeAdapter(
-    data: OrderedRealmCollection<ChallengeState>
-) : RealmRecyclerViewAdapter<ChallengeState, ChallengeAdapter.ViewHolder>(data, true) {
+class ChallengeAdapter : RecyclerView.Adapter<ChallengeAdapter.ViewHolder>() {
 
     private val dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+    private var items: List<ChallengeState> = emptyList()
+
+    fun updateData(newItems: List<ChallengeState>) {
+        items = newItems
+        notifyDataSetChanged()
+    }
+
+    override fun getItemCount(): Int = items.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -25,7 +29,7 @@ class ChallengeAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = getItem(position) ?: return
+        val item = items[position]
         holder.phoneNumber.text = item.phoneNumber
         holder.type.text = item.type.name
         holder.question.text = item.challengeQuestion

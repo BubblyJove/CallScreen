@@ -7,16 +7,20 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.callscreen.app.R
 import com.callscreen.app.model.WhitelistedContact
-import io.realm.OrderedRealmCollection
-import io.realm.RealmRecyclerViewAdapter
 import java.text.DateFormat
 import java.util.Date
 
-class WhitelistedContactAdapter(
-    data: OrderedRealmCollection<WhitelistedContact>
-) : RealmRecyclerViewAdapter<WhitelistedContact, WhitelistedContactAdapter.ViewHolder>(data, true) {
+class WhitelistedContactAdapter : RecyclerView.Adapter<WhitelistedContactAdapter.ViewHolder>() {
 
     private val dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+    private var items: List<WhitelistedContact> = emptyList()
+
+    fun updateData(newItems: List<WhitelistedContact>) {
+        items = newItems
+        notifyDataSetChanged()
+    }
+
+    override fun getItemCount(): Int = items.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -25,7 +29,7 @@ class WhitelistedContactAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = getItem(position) ?: return
+        val item = items[position]
         holder.phoneNumber.text = item.displayName.ifBlank { item.phoneNumber }
         holder.source.text = item.source.name.replace('_', ' ').lowercase()
             .replaceFirstChar { it.uppercase() }

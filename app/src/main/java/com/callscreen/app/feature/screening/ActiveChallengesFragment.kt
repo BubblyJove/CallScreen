@@ -21,6 +21,7 @@ class ActiveChallengesFragment : Fragment() {
     @Inject lateinit var screeningRepository: ScreeningRepository
 
     private var challenges: RealmResults<ChallengeState>? = null
+    private var adapter: ChallengeAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
@@ -48,18 +49,21 @@ class ActiveChallengesFragment : Fragment() {
         }
 
         recyclerView.layoutManager = LinearLayoutManager(context)
+        adapter = ChallengeAdapter()
+        recyclerView.adapter = adapter
 
         challenges = screeningRepository.getActiveChallenges()
-        recyclerView.adapter = ChallengeAdapter(challenges!!)
-        ScreenLog.d(TAG, "Adapter set, initial size=${challenges?.size ?: 0}")
         challenges?.addChangeListener { results ->
-            ScreenLog.d(TAG, "Change listener fired: ${results.size} results")
-            if (results.isEmpty()) {
-                recyclerView.visibility = View.GONE
-                emptyView.visibility = View.VISIBLE
-            } else {
+            ScreenLog.d(TAG, "Change listener: ${results.size} results, loaded=${results.isLoaded}")
+            if (results.isLoaded && results.isNotEmpty()) {
+                val copied = results.realm.copyFromRealm(results)
+                adapter?.updateData(copied)
                 recyclerView.visibility = View.VISIBLE
                 emptyView.visibility = View.GONE
+            } else {
+                adapter?.updateData(emptyList())
+                recyclerView.visibility = View.GONE
+                emptyView.visibility = View.VISIBLE
             }
         }
 

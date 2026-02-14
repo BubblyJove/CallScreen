@@ -21,6 +21,7 @@ class PendingMessagesFragment : Fragment() {
     @Inject lateinit var screeningRepository: ScreeningRepository
 
     private var pendingMessages: RealmResults<PendingScreenedMessage>? = null
+    private var adapter: PendingMessageAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
@@ -37,28 +38,30 @@ class PendingMessagesFragment : Fragment() {
         val recyclerView = view.findViewById<RecyclerView>(R.id.recyclerView)
         val emptyView = view.findViewById<TextView>(R.id.emptyView)
 
-        // Show empty state by default
         recyclerView.visibility = View.GONE
         emptyView.visibility = View.VISIBLE
 
         if (!::screeningRepository.isInitialized) {
-            ScreenLog.w(TAG, "screeningRepository not initialized, returning empty view")
+            ScreenLog.w(TAG, "screeningRepository not initialized")
             return view
         }
 
         recyclerView.layoutManager = LinearLayoutManager(context)
+        adapter = PendingMessageAdapter()
+        recyclerView.adapter = adapter
 
         pendingMessages = screeningRepository.getPendingMessages()
-        recyclerView.adapter = PendingMessageAdapter(pendingMessages!!)
-        ScreenLog.d(TAG, "Adapter set, initial size=${pendingMessages?.size ?: 0}")
         pendingMessages?.addChangeListener { results ->
-            ScreenLog.d(TAG, "Change listener fired: ${results.size} results")
-            if (results.isEmpty()) {
-                recyclerView.visibility = View.GONE
-                emptyView.visibility = View.VISIBLE
-            } else {
+            ScreenLog.d(TAG, "Change listener: ${results.size} results, loaded=${results.isLoaded}")
+            if (results.isLoaded && results.isNotEmpty()) {
+                val copied = results.realm.copyFromRealm(results)
+                adapter?.updateData(copied)
                 recyclerView.visibility = View.VISIBLE
                 emptyView.visibility = View.GONE
+            } else {
+                adapter?.updateData(emptyList())
+                recyclerView.visibility = View.GONE
+                emptyView.visibility = View.VISIBLE
             }
         }
 

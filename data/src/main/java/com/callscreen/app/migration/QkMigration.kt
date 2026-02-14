@@ -23,8 +23,9 @@ import com.callscreen.app.blocking.QksmsBlockingClient
 import com.callscreen.app.common.util.extensions.versionCode
 import com.callscreen.app.repository.ConversationRepository
 import com.callscreen.app.util.Preferences
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import io.reactivex.Completable
+import io.reactivex.schedulers.Schedulers
+import timber.log.Timber
 import javax.inject.Inject
 
 class QkMigration @Inject constructor(
@@ -35,7 +36,7 @@ class QkMigration @Inject constructor(
 ) {
 
     fun performMigration() {
-        GlobalScope.launch {
+        Completable.fromAction {
             val oldVersion = prefs.version.get()
 
             if (oldVersion < 2199) {
@@ -44,6 +45,8 @@ class QkMigration @Inject constructor(
 
             prefs.version.set(context.versionCode)
         }
+            .subscribeOn(Schedulers.io())
+            .subscribe({}, { e -> Timber.e(e, "Migration failed") })
     }
 
     private fun upgradeTo370() {

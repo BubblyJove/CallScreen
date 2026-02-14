@@ -263,9 +263,12 @@ class ConversationRepositoryImpl @Inject constructor(
             .equalTo("id", threadId)
             .findFirst()
             ?.let { conversation ->
-                val conversationLastSmsSender: String? = conversation.recipients.find { recipient ->
-                    phoneNumberUtils.compare(recipient.address, conversation.lastMessage!!.address)
-                }?.contact?.name
+                val lastMessageAddress = conversation.lastMessage?.address
+                val conversationLastSmsSender: String? = if (lastMessageAddress != null) {
+                    conversation.recipients.find { recipient ->
+                        phoneNumberUtils.compare(recipient.address, lastMessageAddress)
+                    }?.contact?.name
+                } else null
 
                 Pair(conversation, conversationLastSmsSender)
             }

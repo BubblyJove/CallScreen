@@ -41,7 +41,7 @@ class DeleteScheduledMessages @Inject constructor(
                         topDir.exists() && topDir.deleteRecursively()
                     }
                 } catch (e: Exception) {
-                    Timber.e("Unable to delete scheduled messages.")
+                    Timber.e(e, "Unable to delete scheduled messages")
                 }
 
                 // delete the db entries

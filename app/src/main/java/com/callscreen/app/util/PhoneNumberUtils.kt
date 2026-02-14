@@ -45,6 +45,7 @@ object PhoneNumberUtil {
                 null, null, null
             )?.use { it.count > 0 } ?: false
         } catch (e: Exception) {
+            timber.log.Timber.w(e, "Failed to look up contact for %s", phoneNumber)
             false
         }
     }
@@ -72,6 +73,7 @@ object PhoneNumberUtil {
                 } else null
             }
         } catch (e: Exception) {
+            timber.log.Timber.w(e, "Failed to get contact name for %s", phoneNumber)
             null
         }
     }

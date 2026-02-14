@@ -33,7 +33,8 @@ class MessageUtilsController : QkController<MessageUtilsControllerBinding, Messa
     @Inject lateinit var context: Context
     @Inject override lateinit var presenter: MessageUtilsPresenter
     private val autoDeleteDialog: AutoDeleteDialog by lazy {
-        AutoDeleteDialog(activity!!, autoDeleteSubject::onNext)
+        val act = requireNotNull(activity) { "Activity must be available for autoDeleteDialog" }
+        AutoDeleteDialog(act, autoDeleteSubject::onNext)
     }
     private val autoDeleteSubject: Subject<Int> = PublishSubject.create()
     override val autoDeduplicateClickIntent by lazy { binding.autoDeduplicate.clicks() }
@@ -86,7 +87,7 @@ class MessageUtilsController : QkController<MessageUtilsControllerBinding, Messa
             }
         }
 
-        binding!!.autoDelete.summary = when (state.autoDelete) {
+        binding.autoDelete.summary = when (state.autoDelete) {
             0 -> context.getString(R.string.settings_auto_delete_never)
             else -> context.resources.getQuantityString(
                 R.plurals.settings_auto_delete_summary, state.autoDelete, state.autoDelete)
@@ -114,7 +115,8 @@ class MessageUtilsController : QkController<MessageUtilsControllerBinding, Messa
 
     override suspend fun showAutoDeleteWarningDialog(messages: Int): Boolean = withContext(Dispatchers.Main) {
         suspendCancellableCoroutine { cont ->
-            androidx.appcompat.app.AlertDialog.Builder(activity!!)
+            val act = activity ?: run { cont.resume(false); return@suspendCancellableCoroutine }
+            androidx.appcompat.app.AlertDialog.Builder(act)
                 .setTitle(R.string.settings_auto_delete_warning)
                 .setMessage(context.resources.getString(R.string.settings_auto_delete_warning_message, messages))
                 .setOnCancelListener { cont.resume(false) }

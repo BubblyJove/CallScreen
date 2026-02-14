@@ -100,8 +100,9 @@ class PartsAdapter @Inject constructor(
             return
 
         // if audioState is set and binder is audio type, set it's audioState ref
-        if ((audioState != null) && (binder is AudioBinder))
-            binder.audioState = audioState!!
+        val currentAudioState = audioState
+        if (currentAudioState != null && binder is AudioBinder)
+            binder.audioState = currentAudioState
 
         binder.bindPart(holder, part, message, canGroupWithPrevious, canGroupWithNext)
     }

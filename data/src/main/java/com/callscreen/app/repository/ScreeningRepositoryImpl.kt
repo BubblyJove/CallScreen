@@ -7,15 +7,34 @@ import com.callscreen.app.util.PhoneNumberUtils
 import io.reactivex.Flowable
 import io.realm.Realm
 import io.realm.RealmResults
+import timber.log.Timber
 import javax.inject.Inject
 
 class ScreeningRepositoryImpl @Inject constructor(
     private val phoneNumberUtils: PhoneNumberUtils
 ) : ScreeningRepository {
 
+    companion object {
+        private const val MAX_WHITELIST_SCAN = 10_000
+        private const val MAX_PENDING_MESSAGES = 1_000
+    }
+
     override fun isWhitelisted(phoneNumber: String): Boolean {
+        if (phoneNumber.isBlank()) return false
         return Realm.getDefaultInstance().use { realm ->
+            // Perf: try direct equality match first (O(1) via Realm index) before
+            // falling back to the expensive phoneNumberUtils.compare() scan
+            val normalized = phoneNumberUtils.normalizeNumber(phoneNumber)
+            val directMatch = realm.where(WhitelistedContact::class.java)
+                .equalTo("phoneNumber", phoneNumber)
+                .or()
+                .equalTo("phoneNumber", normalized)
+                .findFirst()
+            if (directMatch != null) return@use true
+
+            // Perf: fall back to full comparison only if direct match fails
             realm.where(WhitelistedContact::class.java)
+                .limit(MAX_WHITELIST_SCAN.toLong())
                 .findAll()
                 .any { contact -> phoneNumberUtils.compare(contact.phoneNumber, phoneNumber) }
         }
@@ -110,10 +129,22 @@ class ScreeningRepositoryImpl @Inject constructor(
         body: String,
         type: PendingScreenedMessage.MessageType
     ) {
+        if (phoneNumber.isBlank()) {
+            Timber.w("Ignoring pending message with blank phone number")
+            return
+        }
         Realm.getDefaultInstance().use { realm ->
-            val maxId = realm.where(PendingScreenedMessage::class.java)
-                .max("id")?.toLong() ?: 0
+            val pendingCount = realm.where(PendingScreenedMessage::class.java)
+                .equalTo("statusString", PendingScreenedMessage.MessageStatus.HELD.name)
+                .count()
+            if (pendingCount >= MAX_PENDING_MESSAGES) {
+                Timber.w("Pending message cap reached (%d), dropping message from %s", pendingCount, phoneNumber)
+                return
+            }
+            // Perf: compute maxId inside the transaction to avoid extra Realm snapshot
             realm.executeTransaction { r ->
+                val maxId = r.where(PendingScreenedMessage::class.java)
+                    .max("id")?.toLong() ?: 0
                 val msg = PendingScreenedMessage().apply {
                     this.id = maxId + 1
                     this.phoneNumber = phoneNumber

@@ -110,7 +110,7 @@ class CryptoRepositoryImpl @Inject constructor(
     }
 
     override fun setChallengePrice(cents: Int) {
-        sharedPrefs.edit().putInt(PREF_CHALLENGE_PRICE, cents).apply()
+        sharedPrefs.edit().putInt(PREF_CHALLENGE_PRICE, cents.coerceAtLeast(0)).apply()
     }
 
     override fun isCryptoChallengeEnabled(): Boolean {

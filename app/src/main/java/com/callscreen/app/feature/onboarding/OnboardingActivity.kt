@@ -93,7 +93,9 @@ class OnboardingActivity : ComponentActivity() {
                 val roleManager = getSystemService(RoleManager::class.java)
                 val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
                 callScreeningLauncher.launch(intent)
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                timber.log.Timber.w(e, "Failed to request call screening role")
+            }
         }
     }
 

@@ -43,7 +43,7 @@ class BlockedNumbersAdapter : QkRealmAdapter<BlockedNumber, QkBindingViewHolder<
     }
 
     override fun onBindViewHolder(holder: QkBindingViewHolder<BlockedNumberListItemBinding>, position: Int) {
-        val item = getItem(position)!!
+        val item = getItem(position) ?: return
 
         holder.binding.number.text = item.address
     }

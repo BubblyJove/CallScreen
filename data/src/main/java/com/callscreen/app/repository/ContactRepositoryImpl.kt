@@ -177,7 +177,7 @@ class ContactRepositoryImpl @Inject constructor(
         } else {
             uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(address))
         }
-        return context.contentResolver.query(uri, arrayOf(BaseColumns._ID), null, null, null)?.count!! > 0
+        return (context.contentResolver.query(uri, arrayOf(BaseColumns._ID), null, null, null)?.use { it.count } ?: 0) > 0
     }
 
 }

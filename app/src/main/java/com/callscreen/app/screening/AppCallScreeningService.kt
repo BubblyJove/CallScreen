@@ -35,16 +35,15 @@ class AppCallScreeningService : CallScreeningService() {
     }
 
     override fun onScreenCall(callDetails: Call.Details) {
-        val handle = callDetails.handle
-        val number = handle?.schemeSpecificPart
+        val number = callDetails.handle?.schemeSpecificPart
 
         if (number.isNullOrBlank()) {
             Timber.w("No caller number — letting call through")
-            respondToCall(callDetails, CallResponse.Builder().build())
+            respondToCall(callDetails, ALLOW_RESPONSE)
             return
         }
 
-        Timber.d("Screening call from $number")
+        Timber.d("Screening call from %s", number)
 
         disposables += checkNumberTrusted.buildObservable(CheckNumberTrusted.Params(number))
             .subscribeOn(Schedulers.io())
@@ -52,33 +51,28 @@ class AppCallScreeningService : CallScreeningService() {
             .firstOrError()
             .subscribe({ trusted ->
                 if (trusted) {
-                    Timber.d("Trusted — allowing call from $number")
-                    respondToCall(callDetails, CallResponse.Builder().build())
+                    Timber.d("Trusted — allowing call from %s", number)
+                    respondToCall(callDetails, ALLOW_RESPONSE)
                 } else {
-                    Timber.d("Untrusted — rejecting call from $number")
-                    val response = CallResponse.Builder()
-                        .setDisallowCall(true)
-                        .setRejectCall(true)
-                        .setSilenceCall(true)
-                        .setSkipNotification(false)
-                        .build()
-                    respondToCall(callDetails, response)
+                    Timber.d("Untrusted — rejecting call from %s", number)
+                    // Perf: respond immediately with pre-built response to minimize ring latency
+                    respondToCall(callDetails, REJECT_RESPONSE)
 
                     // Insert pending message record for the screened call
                     screeningRepository.insertPendingMessage(
                         phoneNumber = number,
-                        body = "[Screened call]",
+                        body = SCREENED_CALL_BODY,
                         type = PendingScreenedMessage.MessageType.CALL
                     )
 
                     // Send math challenge
                     sendMathChallenge.execute(SendMathChallenge.Params(number)) {
-                        Timber.d("Challenge sent for $number")
+                        Timber.d("Challenge sent for %s", number)
                     }
                 }
             }, { error ->
-                Timber.e(error, "Error screening call from $number — fail-open")
-                respondToCall(callDetails, CallResponse.Builder().build())
+                Timber.e(error, "Error screening call from %s — fail-open", number)
+                respondToCall(callDetails, ALLOW_RESPONSE)
             })
     }
 
@@ -89,5 +83,15 @@ class AppCallScreeningService : CallScreeningService() {
 
     companion object {
         private const val TRUST_CHECK_TIMEOUT_MS = 5_000L
+        private const val SCREENED_CALL_BODY = "[Screened call]"
+
+        // Perf: pre-build immutable CallResponse objects to avoid allocation per call
+        private val ALLOW_RESPONSE: CallResponse = CallResponse.Builder().build()
+        private val REJECT_RESPONSE: CallResponse = CallResponse.Builder()
+            .setDisallowCall(true)
+            .setRejectCall(true)
+            .setSilenceCall(true)
+            .setSkipNotification(false)
+            .build()
     }
 }

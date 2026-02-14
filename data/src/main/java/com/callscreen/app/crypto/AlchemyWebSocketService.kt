@@ -32,7 +32,14 @@ class AlchemyWebSocketService @Inject constructor(
         private const val ALCHEMY_WS_BASE = "wss://eth-mainnet.g.alchemy.com/v2/"
         private const val CONFIRMATION_POLL_INTERVAL = 15L // seconds
         private const val TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+        private const val MAX_RESPONSE_SIZE = 64 * 1024 // 64KB cap for JSON-RPC responses
     }
+
+    private val httpClient: OkHttpClient = okHttpClient.newBuilder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     private val activeMonitors = ConcurrentHashMap<String, MonitorState>()
 
@@ -189,9 +196,13 @@ class AlchemyWebSocketService @Inject constructor(
         val txHash = tx.optString("hash", "")
 
         // Parse wei value and compare to challenge amount
-        val weiValue = BigInteger(valueHex.removePrefix("0x"), 16)
+        val hexStr = valueHex.removePrefix("0x").ifBlank { "0" }
+        val weiValue = BigInteger(hexStr, 16)
         val ethValue = BigDecimal(weiValue).divide(BigDecimal.TEN.pow(18))
-        val expectedAmount = BigDecimal(challenge.exactAmount)
+        val expectedAmount = try { BigDecimal(challenge.exactAmount) } catch (e: NumberFormatException) {
+            Timber.w(e, "Invalid exactAmount for challenge %s", challenge.id)
+            return
+        }
 
         if (ethValue.compareTo(expectedAmount) == 0) {
             Timber.d("ETH payment matched! tx=$txHash amount=$ethValue")
@@ -214,10 +225,14 @@ class AlchemyWebSocketService @Inject constructor(
         val data = log.optString("data", "0x0")
 
         // Parse token amount from log data
-        val rawAmount = BigInteger(data.removePrefix("0x"), 16)
+        val hexStr = data.removePrefix("0x").ifBlank { "0" }
+        val rawAmount = BigInteger(hexStr, 16)
         val decimals = challenge.tokenType.decimals
         val tokenAmount = BigDecimal(rawAmount).divide(BigDecimal.TEN.pow(decimals))
-        val expectedAmount = BigDecimal(challenge.exactAmount)
+        val expectedAmount = try { BigDecimal(challenge.exactAmount) } catch (e: NumberFormatException) {
+            Timber.w(e, "Invalid exactAmount for challenge %s", challenge.id)
+            return
+        }
 
         if (tokenAmount.compareTo(expectedAmount) == 0) {
             Timber.d("${challenge.tokenType.name} payment matched! tx=$txHash amount=$tokenAmount")
@@ -295,8 +310,8 @@ class AlchemyWebSocketService @Inject constructor(
             ))
             .build()
 
-        val response = okHttpClient.newCall(httpRequest).execute()
-        val body = response.body?.string() ?: return -1
+        val response = httpClient.newCall(httpRequest).execute()
+        val body = response.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return -1
         val json = JSONObject(body)
         val result = json.optJSONObject("result") ?: return -1
 
@@ -319,15 +334,15 @@ class AlchemyWebSocketService @Inject constructor(
             ))
             .build()
 
-        val blockResponse = okHttpClient.newCall(blockHttpRequest).execute()
-        val blockBody = blockResponse.body?.string() ?: return -1
+        val blockResponse = httpClient.newCall(blockHttpRequest).execute()
+        val blockBody = blockResponse.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return -1
         val blockJson = JSONObject(blockBody)
         val currentBlockHex = blockJson.optString("result", "")
 
         if (currentBlockHex.isBlank()) return -1
 
-        val txBlock = BigInteger(blockNumberHex.removePrefix("0x"), 16)
-        val currentBlock = BigInteger(currentBlockHex.removePrefix("0x"), 16)
+        val txBlock = try { BigInteger(blockNumberHex.removePrefix("0x").ifBlank { "0" }, 16) } catch (e: NumberFormatException) { return -1 }
+        val currentBlock = try { BigInteger(currentBlockHex.removePrefix("0x").ifBlank { "0" }, 16) } catch (e: NumberFormatException) { return -1 }
 
         return (currentBlock - txBlock).toInt().coerceAtLeast(0)
     }

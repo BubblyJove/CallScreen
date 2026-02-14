@@ -25,6 +25,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.net.toFile
 import com.callscreen.app.util.FileUtils
+import timber.log.Timber
 import java.util.UUID
 
 object MediaRecorderManager : MediaRecorder() {
@@ -56,6 +57,7 @@ object MediaRecorderManager : MediaRecorder() {
             uri
         }
         catch (e: Exception) {
+            Timber.e(e, "Failed to stop recording")
             Uri.EMPTY
         }
     }
@@ -97,6 +99,7 @@ object MediaRecorderManager : MediaRecorder() {
             uri
         }
         catch (e: Exception) {
+            Timber.e(e, "Failed to start recording")
             Uri.EMPTY
         }
     }

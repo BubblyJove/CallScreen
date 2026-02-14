@@ -29,6 +29,7 @@ import com.callscreen.app.util.Constants
 import com.callscreen.app.util.FileUtils
 import io.reactivex.Flowable
 import io.realm.RealmList
+import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
 
@@ -84,6 +85,7 @@ class AddScheduledMessage @Inject constructor(
 
                             localUri.toString()
                         } catch (e: Exception) {
+                            Timber.w(e, "Failed to copy scheduled message attachment")
                             attachmentUri.toString()  // on any error, use original uri string
                         }
                     }.toTypedArray()

@@ -239,11 +239,11 @@ class ReceiveMmsWorker(appContext: Context, workerParams: WorkerParameters)
             }
             else Timber.e("empty mms data")
         } catch (e: FileNotFoundException) {
-            Timber.e("file not found: ${e.message}")
+            Timber.e(e, "MMS receive: file not found")
         } catch (e: IOException) {
-            Timber.e("io exception: ${e.message}")
+            Timber.e(e, "MMS receive: IO exception")
         } catch (e: Exception) {
-            Timber.e("mms receive worker exception: ${e.message}")
+            Timber.e(e, "MMS receive worker exception")
         } finally {
             downloadFile.delete()
         }

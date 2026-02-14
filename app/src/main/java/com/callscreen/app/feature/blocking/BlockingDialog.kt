@@ -27,10 +27,10 @@ import com.callscreen.app.interactor.MarkBlocked
 import com.callscreen.app.interactor.MarkUnblocked
 import com.callscreen.app.repository.ConversationRepository
 import com.callscreen.app.util.Preferences
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import javax.inject.Inject
 
 // TODO: Once we have a custom dialog based on conductor, turn this into a controller
@@ -43,7 +43,7 @@ class BlockingDialog @Inject constructor(
     private val markUnblocked: MarkUnblocked
 ) {
 
-    fun show(activity: Activity, conversationIds: List<Long>, block: Boolean) = GlobalScope.launch {
+    fun show(activity: Activity, conversationIds: List<Long>, block: Boolean) = MainScope().launch {
         val addresses = conversationIds.toLongArray()
                 .let { conversationRepo.getConversations(*it) }
                 .flatMap { conversation -> conversation.recipients }

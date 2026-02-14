@@ -32,21 +32,33 @@ import javax.inject.Singleton
 @Singleton
 class DateFormatter @Inject constructor(val context: Context) {
 
+    // Perf: pre-compile the whitespace+AM/PM regex once
+    companion object {
+        private val AM_PM_REGEX = "\\s+a".toRegex()
+    }
+
+    // Perf: cache SimpleDateFormat instances by pattern string.
+    // getFormatter() is called on every message render in conversation lists,
+    // and SimpleDateFormat construction + getBestDateTimePattern are expensive.
+    private val formatterCache = HashMap<String, SimpleDateFormat>(12)
+
     /**
      * Formats the [pattern] correctly for the current locale, and replaces 12 hour format with
      * 24 hour format if necessary
      */
     private fun getFormatter(pattern: String): SimpleDateFormat {
-        var formattedPattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), pattern)
+        return formatterCache.getOrPut(pattern) {
+            var formattedPattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), pattern)
 
-        if (DateFormat.is24HourFormat(context)) {
-            formattedPattern = formattedPattern
-                    .replace("h", "HH")
-                    .replace("K", "HH")
-                    .replace("\\s+a".toRegex(), "")
+            if (DateFormat.is24HourFormat(context)) {
+                formattedPattern = formattedPattern
+                        .replace("h", "HH")
+                        .replace("K", "HH")
+                        .replace(AM_PM_REGEX, "")
+            }
+
+            SimpleDateFormat(formattedPattern, Locale.getDefault())
         }
-
-        return SimpleDateFormat(formattedPattern, Locale.getDefault())
     }
 
     fun getDetailedTimestamp(date: Long): String {

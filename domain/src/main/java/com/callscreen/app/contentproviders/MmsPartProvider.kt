@@ -25,6 +25,7 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import timber.log.Timber
 import java.io.FileNotFoundException
 
 
@@ -43,6 +44,7 @@ class MmsPartProvider : ContentProvider() {
             return try {
                 return uri.pathSegments[uri.pathSegments.size - 2]
             } catch (e: Exception) {
+                Timber.w(e, "Failed to parse MMS part ID from URI: %s", uri)
                 null
             }
         }

@@ -27,6 +27,7 @@ import io.reactivex.schedulers.Schedulers
 import timber.log.Timber
 import java.io.FileNotFoundException
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,7 +42,21 @@ class FileLoggingTree @Inject constructor(
 ) : Timber.DebugTree() {
     companion object {
         val TAG: String? = FileLoggingTree::class.simpleName
+
+        // Perf: pre-allocate priority char lookup to avoid when-expression per log call
+        private val PRIORITY_CHARS = charArrayOf(
+            '?', '?', 'V', 'D', 'I', 'W', 'E', 'A'
+        )
     }
+
+    // Perf: cache SimpleDateFormat instances — they are expensive to construct
+    private val timestampFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS", Locale.getDefault())
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    // Perf: reuse Date and StringBuilder to avoid allocation per log call
+    // (safe because all access is synchronized)
+    private val reusableDate = Date()
+    private val logBuilder = StringBuilder(256)
 
     private var logFileUri: Uri? = null
 
@@ -50,37 +65,28 @@ class FileLoggingTree @Inject constructor(
 
         Schedulers.io().scheduleDirect {
             synchronized(this) {    // one thread can access file at a time
-                val logItem =
-                    "${    // date/time
-                        SimpleDateFormat(
-                            "yyyy-MM-dd HH:mm:ss:SSS",
-                            Locale.getDefault()
-                        ).format(System.currentTimeMillis())
-                    } ${    // priority
-                        when (priority) {
-                            Log.VERBOSE -> "V"
-                            Log.DEBUG -> "D"
-                            Log.INFO -> "I"
-                            Log.WARN -> "W"
-                            Log.ERROR -> "E"
-                            else -> "?"
-                        }
-                    }/${    // tag
-                        tag
-                    }: ${    // message
-                        message
-                    }${    // stack trace
-                        Log.getStackTraceString(t)
-                    }\n"
+                val now = System.currentTimeMillis()
+                reusableDate.time = now
+
+                // Perf: use StringBuilder instead of string template interpolation
+                logBuilder.clear()
+                logBuilder.append(timestampFormat.format(reusableDate))
+                    .append(' ')
+                    // Perf: array lookup instead of when-expression
+                    .append(if (priority in PRIORITY_CHARS.indices) PRIORITY_CHARS[priority] else '?')
+                    .append('/')
+                    .append(tag)
+                    .append(": ")
+                    .append(message)
+
+                if (t != null) {
+                    logBuilder.append(Log.getStackTraceString(t))
+                }
+                logBuilder.append('\n')
 
                 // if uri of log file not yet determined, get one now
                 if (logFileUri == null) {
-                    val filename = "Quik-log-${
-                        SimpleDateFormat(
-                            "yyyy-MM-dd",
-                            Locale.getDefault()
-                        ).format(System.currentTimeMillis())
-                    }.log"
+                    val filename = "Quik-log-${dateFormat.format(reusableDate)}.log"
 
                     val (uri, e) = FileUtils.create(
                         FileUtils.Location.Downloads,
@@ -95,9 +101,11 @@ class FileLoggingTree @Inject constructor(
                 }
 
                 logFileUri?.let {
-                    val e = FileUtils.append(context, it, logItem.toByteArray())
+                    // Perf: convert StringBuilder to bytes directly
+                    val bytes = logBuilder.toString().toByteArray()
+                    val e = FileUtils.append(context, it, bytes)
                     if (e is FileNotFoundException)
-                        Log.e(TAG, "Log file went away. Lost log file item: $logItem", e)
+                        Log.e(TAG, "Log file went away", e)
                     else if (e is Exception)
                         Log.e(TAG, "Error while logging into file", e)
                 }

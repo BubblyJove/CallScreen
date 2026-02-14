@@ -62,7 +62,7 @@ interface CursorToMessage : Mapper<Pair<Cursor, CursorToMessage.MessageColumns>,
         private fun getColumnIndex(columnsName: String) = try {
             cursor.getColumnIndexOrThrow(columnsName)
         } catch (e: Exception) {
-            Timber.e("Couldn't find column \'$columnsName\' in ${cursor.columnNames.contentToString()}")
+            Timber.e(e, "Couldn't find column \'$columnsName\' in ${cursor.columnNames.contentToString()}")
             -1
         }
     }

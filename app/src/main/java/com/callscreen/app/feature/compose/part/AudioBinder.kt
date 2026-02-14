@@ -160,8 +160,8 @@ class AudioBinder @Inject constructor(colors: Colors, private val context: Conte
                             audioState.apply {
                                 // if this part is currently active, set it to stopped and inactive
                                 if ((partId == part.id) && (viewHolder != null)) {
-                                    val stoppedBinding = MmsAudioPreviewListItemBinding.bind(viewHolder!!.itemView)
-                                    uiToStopped(stoppedBinding)
+                                    val stoppedBinding = viewHolder?.let { MmsAudioPreviewListItemBinding.bind(it.itemView) }
+                                    if (stoppedBinding != null) uiToStopped(stoppedBinding)
                                 }
 
                                 state = QkMediaPlayer.PlayingState.Stopped
@@ -290,7 +290,9 @@ class AudioBinder @Inject constructor(colors: Colors, private val context: Conte
                             .into(this)
                     }
                 }
-            } catch (e: Exception) { /* nothing */ }
+            } catch (e: Exception) {
+                timber.log.Timber.w(e, "Failed to read audio metadata")
+            }
             finally {
                 release()
             }

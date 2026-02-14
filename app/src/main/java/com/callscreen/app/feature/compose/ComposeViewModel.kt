@@ -723,6 +723,7 @@ class ComposeViewModel @Inject constructor(
 
                             Attachment(context, cacheFileUri)
                         } catch (e: Exception) {
+                            Timber.w(e, "Failed to cache attachment for delayed message cancel")
                             null
                         }
                     }
@@ -1126,7 +1127,7 @@ class ComposeViewModel @Inject constructor(
                         )
                     }
                 }
-                catch (e: Exception) { /* nothing */ }
+                catch (e: Exception) { Timber.w(e, "Failed to process audio recording attachment") }
             }
 
         // audio recording player play/pause button

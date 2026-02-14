@@ -5,6 +5,7 @@ import android.provider.ContactsContract
 import com.callscreen.app.model.WhitelistedContact
 import com.callscreen.app.repository.ScreeningRepository
 import io.reactivex.Flowable
+import timber.log.Timber
 import javax.inject.Inject
 
 class CheckNumberTrusted @Inject constructor(
@@ -14,6 +15,11 @@ class CheckNumberTrusted @Inject constructor(
 
     data class Params(val phoneNumber: String)
 
+    // Perf: pre-allocate projection array to avoid allocation per query
+    companion object {
+        private val NAME_PROJECTION = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
+    }
+
     override fun buildObservable(params: Params): Flowable<Boolean> {
         return Flowable.fromCallable {
             // Check whitelist DB first
@@ -21,13 +27,14 @@ class CheckNumberTrusted @Inject constructor(
                 return@fromCallable true
             }
 
-            // Check device contacts
-            if (isInDeviceContacts(params.phoneNumber)) {
+            // Perf: single content resolver query replaces the previous two-query pattern
+            // (isInDeviceContacts + getContactName). Gets name directly if contact exists.
+            val contactName = getContactNameIfExists(params.phoneNumber)
+            if (contactName != null) {
                 // Auto-whitelist with source=CONTACTS
-                val displayName = getContactName(params.phoneNumber) ?: params.phoneNumber
                 screeningRepository.whitelistContact(
                     params.phoneNumber,
-                    displayName,
+                    contactName,
                     WhitelistedContact.WhitelistSource.CONTACTS
                 )
                 return@fromCallable true
@@ -37,38 +44,25 @@ class CheckNumberTrusted @Inject constructor(
         }
     }
 
-    private fun isInDeviceContacts(phoneNumber: String): Boolean {
+    /**
+     * Perf: single query to check existence and get display name simultaneously.
+     * Returns display name if found, null otherwise.
+     */
+    private fun getContactNameIfExists(phoneNumber: String): String? {
         val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
             .buildUpon()
             .appendPath(phoneNumber)
             .build()
 
         return try {
-            context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup._ID), null, null, null)?.use {
-                it.moveToFirst()
-            } ?: false
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun getContactName(phoneNumber: String): String? {
-        val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
-            .buildUpon()
-            .appendPath(phoneNumber)
-            .build()
-
-        return try {
-            context.contentResolver.query(
-                uri,
-                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
-                null, null, null
-            )?.use { cursor ->
+            context.contentResolver.query(uri, NAME_PROJECTION, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
-                    cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.PhoneLookup.DISPLAY_NAME))
+                    // Perf: use column index 0 directly — we know the projection has exactly one column
+                    cursor.getString(0) ?: phoneNumber
                 } else null
             }
         } catch (e: Exception) {
+            Timber.w(e, "Failed to check device contacts for %s", phoneNumber)
             null
         }
     }

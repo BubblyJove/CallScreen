@@ -74,7 +74,8 @@ class SettingsController : QkController<SettingsControllerBinding, SettingsView,
     @Inject override lateinit var presenter: SettingsPresenter
 
     private val signatureDialog: TextInputDialog by lazy {
-        TextInputDialog(activity!!, context.getString(R.string.settings_signature_title), signatureSubject::onNext)
+        val act = requireNotNull(activity) { "Activity must be available for signatureDialog" }
+        TextInputDialog(act, context.getString(R.string.settings_signature_title), signatureSubject::onNext)
     }
 
     private val viewQksmsPlusSubject: Subject<Unit> = PublishSubject.create()
@@ -219,7 +220,7 @@ class SettingsController : QkController<SettingsControllerBinding, SettingsView,
     }
 
     // TODO change this to a PopupWindow
-    override fun showNightModeDialog() = nightModeDialog.show(activity!!)
+    override fun showNightModeDialog() { val act = activity ?: return; nightModeDialog.show(act) }
 
     override fun showStartTimePicker(hour: Int, minute: Int) {
         TimePickerDialog(activity, { _, newHour, newMinute ->
@@ -233,15 +234,15 @@ class SettingsController : QkController<SettingsControllerBinding, SettingsView,
         }, hour, minute, DateFormat.is24HourFormat(activity)).show()
     }
 
-    override fun showTextSizePicker() = textSizeDialog.show(activity!!)
+    override fun showTextSizePicker() { val act = activity ?: return; textSizeDialog.show(act) }
 
-    override fun showDelayDurationDialog() = sendDelayDialog.show(activity!!)
+    override fun showDelayDurationDialog() { val act = activity ?: return; sendDelayDialog.show(act) }
 
     override fun showSignatureDialog(signature: String) = signatureDialog.setText(signature).show()
 
-    override fun showMmsSizePicker() = mmsSizeDialog.show(activity!!)
+    override fun showMmsSizePicker() { val act = activity ?: return; mmsSizeDialog.show(act) }
 
-    override fun showMessageLinkHandlingDialogPicker() = messageLinkHandlingDialog.show(activity!!)
+    override fun showMessageLinkHandlingDialogPicker() { val act = activity ?: return; messageLinkHandlingDialog.show(act) }
 
     override fun showSwipeActions() {
         router.pushController(RouterTransaction.with(SwipeActionsController())

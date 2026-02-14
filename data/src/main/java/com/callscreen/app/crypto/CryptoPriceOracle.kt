@@ -6,12 +6,13 @@ import com.squareup.moshi.Moshi
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import timber.log.Timber
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class CryptoPriceOracle @Inject constructor(
-    private val okHttpClient: OkHttpClient,
+    okHttpClient: OkHttpClient,
     private val moshi: Moshi
 ) {
 
@@ -19,7 +20,14 @@ class CryptoPriceOracle @Inject constructor(
         private const val COINGECKO_URL =
             "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
         private const val CACHE_TTL_MS = 60_000L // 1 minute
+        private const val MAX_RESPONSE_SIZE = 16 * 1024 // 16KB cap
     }
+
+    private val httpClient: OkHttpClient = okHttpClient.newBuilder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     @JsonClass(generateAdapter = true)
     data class PriceResponse(
@@ -31,8 +39,8 @@ class CryptoPriceOracle @Inject constructor(
         @Json(name = "usd") val usd: Double?
     )
 
-    private var cachedPrice: Double? = null
-    private var cacheTimestamp: Long = 0
+    @Volatile private var cachedPrice: Double? = null
+    @Volatile private var cacheTimestamp: Long = 0
 
     /**
      * Fetch current ETH/USD price. Uses a 1-minute cache.
@@ -51,13 +59,13 @@ class CryptoPriceOracle @Inject constructor(
                 .url(COINGECKO_URL)
                 .build()
 
-            val response = okHttpClient.newCall(request).execute()
+            val response = httpClient.newCall(request).execute()
             if (!response.isSuccessful) {
                 Timber.w("CoinGecko API returned ${response.code}")
                 return cachedPrice // Return stale cache on failure
             }
 
-            val body = response.body?.string() ?: return cachedPrice
+            val body = response.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return cachedPrice
             val adapter = moshi.adapter(PriceResponse::class.java)
             val priceResponse = adapter.fromJson(body)
             val price = priceResponse?.ethereum?.usd

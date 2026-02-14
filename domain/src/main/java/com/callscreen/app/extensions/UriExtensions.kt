@@ -132,6 +132,7 @@ fun Uri.contactToVCard(context: Context): Uri =
             }
         )
     } catch (e: Exception) {
+        timber.log.Timber.w(e, "Failed to convert contact URI to VCard")
         Uri.EMPTY
     }
 

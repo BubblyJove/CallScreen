@@ -25,6 +25,16 @@ import io.realm.RealmResults
 import javax.inject.Inject
 
 class MessageContentFilterRepositoryImpl @Inject constructor() : MessageContentFilterRepository {
+
+    // Perf: cache compiled Regex objects keyed by their pattern string.
+    // isBlocked() is called for every incoming message, and Regex compilation
+    // is expensive. Filters rarely change, so the cache stays warm.
+    private val regexCache = HashMap<String, Regex>(16)
+
+    private fun getCachedRegex(pattern: String): Regex {
+        return regexCache.getOrPut(pattern) { Regex(pattern) }
+    }
+
     override fun createFilter(data: MessageContentFilterData) {
         Realm.getDefaultInstance().use { realm ->
             realm.refresh()
@@ -35,6 +45,8 @@ class MessageContentFilterRepositoryImpl @Inject constructor() : MessageContentF
                 realm.insert(MessageContentFilter(maxId + 1, data.value, data.caseSensitive, data.isRegex, data.includeContacts))
             }
         }
+        // Perf: invalidate cache when filters change
+        regexCache.clear()
     }
 
     override fun getMessageContentFilters(): RealmResults<MessageContentFilter> {
@@ -52,6 +64,8 @@ class MessageContentFilterRepositoryImpl @Inject constructor() : MessageContentF
 
     override fun isBlocked(messageBody: String, address: String, contactsRepo: ContactRepository): Boolean {
         val isContact = contactsRepo.isContact(address)
+        // Perf: pre-compute lowercase body once, outside the loop
+        var lowercaseBody: String? = null
 
         return Realm.getDefaultInstance().use { realm ->
             realm.where(MessageContentFilter::class.java)
@@ -60,13 +74,15 @@ class MessageContentFilterRepositoryImpl @Inject constructor() : MessageContentF
                     if (isContact && !filter.includeContacts) {
                         false
                     } else if (filter.isRegex) {
-                        Regex(filter.value).matches(messageBody)
+                        getCachedRegex(filter.value).matches(messageBody)
                     } else if (filter.caseSensitive) {
                         val regexp = "[\\s\\S]*\\b" + Regex.escape(filter.value) + "\\b[\\s\\S]*"
-                        Regex(regexp).matches(messageBody)
+                        getCachedRegex(regexp).matches(messageBody)
                     } else {
+                        // Perf: lazy-compute lowercase body only when needed
+                        if (lowercaseBody == null) lowercaseBody = messageBody.lowercase()
                         val regexp = "[\\s\\S]*\\b" + Regex.escape(filter.value.lowercase()) + "\\b[\\s\\S]*"
-                        Regex(regexp).matches(messageBody.lowercase())
+                        getCachedRegex(regexp).matches(lowercaseBody!!)
                     }
                 }
         }
@@ -81,6 +97,8 @@ class MessageContentFilterRepositoryImpl @Inject constructor() : MessageContentF
                     .deleteAllFromRealm()
             }
         }
+        // Perf: invalidate cache when filters change
+        regexCache.clear()
     }
 
 }

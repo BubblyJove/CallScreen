@@ -16,7 +16,7 @@ open class ChallengeState : RealmObject() {
     var typeString: String = ChallengeType.MATH.name
 
     var type: ChallengeType
-        get() = ChallengeType.valueOf(typeString)
+        get() = try { ChallengeType.valueOf(typeString) } catch (e: IllegalArgumentException) { ChallengeType.MATH }
         set(value) { typeString = value.name }
 
     fun isExpired(): Boolean = System.currentTimeMillis() > expiresAt

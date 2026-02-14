@@ -28,11 +28,11 @@ open class CryptoPaymentChallenge : RealmObject() {
     var txHash: String = ""
 
     var tokenType: TokenType
-        get() = TokenType.valueOf(tokenTypeString)
+        get() = try { TokenType.valueOf(tokenTypeString) } catch (e: IllegalArgumentException) { TokenType.ETH }
         set(value) { tokenTypeString = value.name }
 
     var status: PaymentStatus
-        get() = PaymentStatus.valueOf(statusString)
+        get() = try { PaymentStatus.valueOf(statusString) } catch (e: IllegalArgumentException) { PaymentStatus.PENDING }
         set(value) { statusString = value.name }
 
     fun isExpired(): Boolean = System.currentTimeMillis() > expiresAt

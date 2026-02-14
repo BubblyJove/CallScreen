@@ -182,7 +182,7 @@ class ContactsViewModel @Inject constructor(
                 .map { (composeItem, force) ->
                     HashMap(composeItem.getContacts().associate { contact ->
                         if (contact.numbers.size == 1 || contact.getDefaultNumber() != null && !force) {
-                            val address = contact.getDefaultNumber()?.address ?: contact.numbers[0]!!.address
+                            val address = contact.getDefaultNumber()?.address ?: requireNotNull(contact.numbers[0]) { "Contact has no phone numbers" }.address
                             address to contact.lookupKey
                         } else {
                             runBlocking {

@@ -21,6 +21,7 @@ package com.callscreen.app.compat
 import android.content.Context
 import android.telephony.SubscriptionManager
 import com.callscreen.app.manager.PermissionManager
+import timber.log.Timber
 import javax.inject.Inject
 
 class SubscriptionManagerCompat @Inject constructor(context: Context, private val permissions: PermissionManager) {
@@ -36,7 +37,7 @@ class SubscriptionManagerCompat @Inject constructor(context: Context, private va
                         SubscriptionInfoCompat(it)
                     } ?: listOf()
                 } catch (e: SecurityException) {
-                    // Handle exception if permission is not granted
+                    Timber.w(e, "Phone permission not granted for subscription info")
                     listOf()
                 }
             } else {

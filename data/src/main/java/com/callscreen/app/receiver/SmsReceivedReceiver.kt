@@ -52,12 +52,26 @@ class SmsReceivedReceiver : BroadcastReceiver() {
 
         val pendingResult = goAsync()
 
-        Sms.Intents.getMessagesFromIntent(intent)?.let { messages ->
+        Sms.Intents.getMessagesFromIntent(intent)?.takeIf { it.isNotEmpty() }?.let { messages ->
             Single.just(messages)
                 .observeOn(Schedulers.io())
                 .map {
                     val address = messages[0].displayOriginatingAddress ?: ""
-                    val body = messages.mapNotNull { it.displayMessageBody }.reduce { acc, new -> acc + new }
+                    if (address.isBlank()) {
+                        Timber.w("SMS received with blank address, skipping screening")
+                        return@map 0L
+                    }
+                    // Perf: use StringBuilder to concatenate multi-part SMS bodies
+                    // instead of reduce() which creates intermediate String objects
+                    val body = if (messages.size == 1) {
+                        messages[0].displayMessageBody ?: ""
+                    } else {
+                        val sb = StringBuilder(messages.size * 160)
+                        for (msg in messages) {
+                            msg.displayMessageBody?.let { sb.append(it) }
+                        }
+                        sb.toString()
+                    }
                     val subId = intent.extras?.getInt("subscription", -1) ?: -1
                     val timestamp = messages[0].timestampMillis
 
@@ -68,26 +82,11 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                         val challenge = screeningRepository.getChallengeForNumber(address)
                         if (challenge != null && !challenge.isExpired()) {
                             Timber.d("Potential challenge response from $address")
-                            val result = validateChallengeResponse
+                            // Perf: all branches insert normally — validate then insert once
+                            validateChallengeResponse
                                 .buildObservable(ValidateChallengeResponse.Params(address, body))
                                 .blockingFirst()
-
-                            when (result) {
-                                is ValidateChallengeResponse.Result.Success -> {
-                                    Timber.d("Challenge passed for $address — inserting to Quik normally")
-                                    // Insert to Quik's normal flow (the success SMS will show up)
-                                    return@map insertAndEnqueue(context, subId, address, body, timestamp)
-                                }
-                                is ValidateChallengeResponse.Result.WrongAnswer -> {
-                                    Timber.d("Wrong challenge answer from $address")
-                                    // Still insert to Quik so user can see the attempt
-                                    return@map insertAndEnqueue(context, subId, address, body, timestamp)
-                                }
-                                else -> {
-                                    // Expired, max attempts, etc. — insert normally
-                                    return@map insertAndEnqueue(context, subId, address, body, timestamp)
-                                }
-                            }
+                            return@map insertAndEnqueue(context, subId, address, body, timestamp)
                         }
 
                         // Step 2: Check if sender is trusted

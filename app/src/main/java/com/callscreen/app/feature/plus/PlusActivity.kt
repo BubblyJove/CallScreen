@@ -37,8 +37,8 @@ import com.callscreen.app.common.widget.PreferenceView
 import com.callscreen.app.feature.plus.experiment.UpgradeButtonExperiment
 import com.callscreen.app.manager.BillingManager
 import com.callscreen.app.databinding.QksmsPlusActivityBinding
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -115,9 +115,11 @@ class PlusActivity : QkThemedActivity(), PlusView {
     }
 
     override fun initiatePurchaseFlow(billingManager: BillingManager, sku: String) {
-        GlobalScope.launch(Dispatchers.Main) {
+        lifecycleScope.launch(Dispatchers.Main) {
             try {
                 billingManager.initiatePurchaseFlow(this@PlusActivity, sku)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.w(e)
                 makeToast(R.string.qksms_plus_error)

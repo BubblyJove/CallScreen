@@ -13,6 +13,6 @@ open class WhitelistedContact : RealmObject() {
     var sourceString: String = WhitelistSource.MANUAL.name
 
     var source: WhitelistSource
-        get() = WhitelistSource.valueOf(sourceString)
+        get() = try { WhitelistSource.valueOf(sourceString) } catch (e: IllegalArgumentException) { WhitelistSource.MANUAL }
         set(value) { sourceString = value.name }
 }

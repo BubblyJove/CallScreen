@@ -64,7 +64,7 @@ class BlockThreadReceiver : BroadcastReceiver() {
                     goAsync().finish()
                 },
                 { error ->
-                    Timber.e("BlockThreadReceiver", "blocking failed")
+                    Timber.e(error, "BlockThreadReceiver: blocking failed")
                     goAsync().finish()
                 }
             )

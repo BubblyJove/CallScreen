@@ -33,6 +33,7 @@ import com.callscreen.app.extensions.isAudio
 import com.callscreen.app.extensions.isContact
 import com.callscreen.app.extensions.isImage
 import com.callscreen.app.extensions.isVCard
+import timber.log.Timber
 
 
 class Attachment (
@@ -70,12 +71,12 @@ class Attachment (
 
     fun getResourceBytes(context: Context): ByteArray {
         // cache resource bytes by loading first time only
-        if (resourceBytes != null)
-            return resourceBytes!!
+        resourceBytes?.let { return it }
 
-        resourceBytes = uri.getResourceBytes(context)
+        val bytes = uri.getResourceBytes(context)
+        resourceBytes = bytes
 
-        return resourceBytes!!
+        return bytes
     }
 
     fun releaseResourceBytes() {
@@ -86,7 +87,10 @@ class Attachment (
         // all file:// scheme files are local to the app cache dir, so can be deleted
         if (uri.scheme == ContentResolver.SCHEME_FILE) {
             return try { uri.toFile().delete() }
-            catch (e: Exception) { false }
+            catch (e: Exception) {
+                Timber.w(e, "Failed to delete cache file: %s", uri)
+                false
+            }
         }
 
         return false

@@ -68,7 +68,8 @@ class BackupController : QkController<BackupControllerBinding, BackupView, Backu
     private val documentSelectedSubject: Subject<Uri> = PublishSubject.create()
 
     private val stopRestoreDialog by lazy {
-        AlertDialog.Builder(activity!!)
+        val act = requireNotNull(activity) { "Activity must be available for stopRestoreDialog" }
+        AlertDialog.Builder(act)
                 .setTitle(R.string.backup_restore_stop_title)
                 .setMessage(R.string.backup_restore_stop_message)
                 .setPositiveButton(R.string.button_stop, stopRestoreConfirmSubject)
@@ -78,7 +79,8 @@ class BackupController : QkController<BackupControllerBinding, BackupView, Backu
     }
 
     private val selectLocationRationaleDialog by lazy {
-        AlertDialog.Builder(activity!!)
+        val act = requireNotNull(activity) { "Activity must be available for selectLocationRationaleDialog" }
+        AlertDialog.Builder(act)
                 .setTitle(R.string.backup_select_location_rationale_title)
                 .setMessage(R.string.backup_select_location_rationale_message)
                 .setPositiveButton(R.string.button_continue, selectFolderConfirmSubject)
@@ -88,7 +90,8 @@ class BackupController : QkController<BackupControllerBinding, BackupView, Backu
     }
 
     private val selectedBackupErrorDialog by lazy {
-        AlertDialog.Builder(activity!!)
+        val act = requireNotNull(activity) { "Activity must be available for selectedBackupErrorDialog" }
+        AlertDialog.Builder(act)
                 .setTitle(R.string.backup_selected_backup_error_title)
                 .setMessage(R.string.backup_selected_backup_error_message)
                 .setPositiveButton(R.string.button_continue, restoreErrorConfirmSubject)
@@ -97,7 +100,8 @@ class BackupController : QkController<BackupControllerBinding, BackupView, Backu
     }
 
     private val selectedBackupDetailsDialog by lazy {
-        AlertDialog.Builder(activity!!)
+        val act = requireNotNull(activity) { "Activity must be available for selectedBackupDetailsDialog" }
+        AlertDialog.Builder(act)
                 .setTitle(R.string.backup_selected_backup_details_title)
                 .setPositiveButton(R.string.backup_restore_title, confirmRestoreConfirmSubject)
                 .setNegativeButton(R.string.button_cancel, confirmRestoreCancelSubject)
@@ -117,12 +121,13 @@ class BackupController : QkController<BackupControllerBinding, BackupView, Backu
 
     override fun onContextAvailable(context: Context) {
         // Init activity result contracts
-        openDirectory = themedActivity!!
+        val themed = requireNotNull(themedActivity) { "ThemedActivity must be available in onContextAvailable" }
+        openDirectory = themed
             .registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
                 uri?.let(documentTreeSelectedSubject::onNext)
             }
 
-        openDocument = themedActivity!!
+        openDocument = themed
             .registerForActivityResult(QkActivityResultContracts.OpenDocument()) { uri ->
                 uri?.let(documentSelectedSubject::onNext)
             }
@@ -158,7 +163,7 @@ class BackupController : QkController<BackupControllerBinding, BackupView, Backu
             state.backupProgress.running -> {
                 binding.progressIcon.setImageResource(R.drawable.ic_file_upload_black_24dp)
                 binding.progressTitle.setText(R.string.backup_backing_up)
-                binding.progressSummary.text = state.backupProgress.getLabel(activity!!)
+                binding.progressSummary.text = activity?.let { state.backupProgress.getLabel(it) } ?: ""
                 binding.progressSummary.isVisible = binding.progressSummary.text.isNotEmpty()
                 binding.progressCancel.isVisible = false
                 val running = (state.backupProgress as? BackupRepository.Progress.Running)
@@ -174,7 +179,7 @@ class BackupController : QkController<BackupControllerBinding, BackupView, Backu
             state.restoreProgress.running -> {
                 binding.progressIcon.setImageResource(R.drawable.ic_file_download_black_24dp)
                 binding.progressTitle.setText(R.string.backup_restoring)
-                binding.progressSummary.text = state.restoreProgress.getLabel(activity!!)
+                binding.progressSummary.text = activity?.let { state.restoreProgress.getLabel(it) } ?: ""
                 binding.progressSummary.isVisible = binding.progressSummary.text.isNotEmpty()
                 binding.progressCancel.isVisible = true
                 val running = (state.restoreProgress as? BackupRepository.Progress.Running)

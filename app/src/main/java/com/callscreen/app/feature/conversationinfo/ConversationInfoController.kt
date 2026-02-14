@@ -55,7 +55,8 @@ class ConversationInfoController(
     @Inject lateinit var adapter: ConversationInfoAdapter
 
     private val nameDialog: TextInputDialog by lazy {
-        TextInputDialog(activity!!, activity!!.getString(R.string.info_name), nameChangeSubject::onNext)
+        val act = requireNotNull(activity) { "ConversationInfoController: activity must not be null when creating nameDialog" }
+        TextInputDialog(act, act.getString(R.string.info_name), nameChangeSubject::onNext)
     }
 
     private val nameChangeSubject: Subject<String> = PublishSubject.create()
@@ -71,7 +72,7 @@ class ConversationInfoController(
 
     override fun onViewCreated() {
         binding.recyclerView.adapter = adapter
-        binding.recyclerView.addItemDecoration(GridSpacingItemDecoration(adapter, activity!!))
+        binding.recyclerView.addItemDecoration(GridSpacingItemDecoration(adapter, requireNotNull(activity) { "Activity must be available in onViewCreated" }))
         binding.recyclerView.layoutManager = GridLayoutManager(activity, 3).apply {
             spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
                 override fun getSpanSize(position: Int): Int = if (adapter.getItemViewType(position) == 2) 1 else 3
@@ -121,15 +122,18 @@ class ConversationInfoController(
     }
 
     override fun showBlockingDialog(conversations: List<Long>, block: Boolean) {
-        blockingDialog.show(activity!!, conversations, block)
+        val act = activity ?: return
+        blockingDialog.show(act, conversations, block)
     }
 
     override fun requestDefaultSms() {
-        navigator.showDefaultSmsDialog(activity!!)
+        val act = activity ?: return
+        navigator.showDefaultSmsDialog(act)
     }
 
     override fun showDeleteDialog() {
-        AlertDialog.Builder(activity!!)
+        val act = activity ?: return
+        AlertDialog.Builder(act)
                 .setTitle(R.string.dialog_delete_title)
                 .setMessage(resources?.getQuantityString(R.plurals.dialog_delete_message, 1))
                 .setPositiveButton(R.string.button_delete) { _, _ -> confirmDeleteSubject.onNext(Unit) }

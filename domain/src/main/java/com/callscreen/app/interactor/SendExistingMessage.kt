@@ -21,6 +21,7 @@ package com.callscreen.app.interactor
 import com.callscreen.app.manager.NotificationManager
 import com.callscreen.app.repository.MessageRepository
 import io.reactivex.Flowable
+import timber.log.Timber
 import javax.inject.Inject
 
 class SendExistingMessage @Inject constructor(
@@ -33,7 +34,11 @@ class SendExistingMessage @Inject constructor(
                 val message = messageRepo.getMessage(messageId)
                 messageRepo.sendMessage(messageId)
 
-                val threadId = message!!.threadId
-                notificationManager.cancel(threadId.toInt() + 100000)
+                val threadId = message?.threadId
+                if (threadId != null) {
+                    notificationManager.cancel(threadId.toInt() + 100000)
+                } else {
+                    Timber.w("SendExistingMessage: message not found for id %d", messageId)
+                }
             }
 }

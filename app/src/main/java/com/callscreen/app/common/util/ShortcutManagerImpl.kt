@@ -104,7 +104,7 @@ class ShortcutManagerImpl @Inject constructor(
         Timber.v("creating shortcut for conversation ${conversation.id}")
         val icon = when {
             conversation.recipients.size == 1 -> {
-                val recipient = conversation.recipients.first()!!
+                val recipient = requireNotNull(conversation.recipients.first()) { "Conversation ${conversation.id} has null first recipient" }
                 recipient.getThemedIcon(context,
                     colors.theme(recipient),
                     ShortcutManagerCompat.getIconMaxWidth(context),

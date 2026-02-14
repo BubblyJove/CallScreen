@@ -25,18 +25,19 @@ class ValidateChallengeResponse @Inject constructor(
             val challenge = screeningRepository.getChallengeForNumber(params.phoneNumber)
 
             if (challenge == null) {
-                Timber.d("No challenge found for ${params.phoneNumber}")
+                // Perf: use %s format to avoid string concat when logging is stripped
+                Timber.d("No challenge found for %s", params.phoneNumber)
                 return@fromCallable Result.NoChallengeFound
             }
 
             if (challenge.isExpired()) {
-                Timber.d("Challenge expired for ${params.phoneNumber}")
+                Timber.d("Challenge expired for %s", params.phoneNumber)
                 screeningRepository.deleteChallengeState(params.phoneNumber)
                 return@fromCallable Result.Expired
             }
 
             if (!challenge.hasAttemptsRemaining()) {
-                Timber.d("Max attempts reached for ${params.phoneNumber}")
+                Timber.d("Max attempts reached for %s", params.phoneNumber)
                 return@fromCallable Result.MaxAttempts
             }
 
@@ -48,7 +49,7 @@ class ValidateChallengeResponse @Inject constructor(
             val expected = challenge.expectedAnswer.trim()
 
             if (answer.equals(expected, ignoreCase = true)) {
-                Timber.d("Challenge passed for ${params.phoneNumber}")
+                Timber.d("Challenge passed for %s", params.phoneNumber)
 
                 // Whitelist contact
                 screeningRepository.whitelistContact(
@@ -66,7 +67,7 @@ class ValidateChallengeResponse @Inject constructor(
                 return@fromCallable Result.Success
             }
 
-            Timber.d("Wrong answer from ${params.phoneNumber}: got '$answer', expected '$expected'")
+            Timber.d("Wrong answer from %s: got '%s', expected '%s'", params.phoneNumber, answer, expected)
             Result.WrongAnswer
         }
     }

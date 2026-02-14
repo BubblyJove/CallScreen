@@ -44,7 +44,7 @@ class MessageContentFiltersAdapter : QkRealmAdapter<MessageContentFilter, QkBind
     }
 
     override fun onBindViewHolder(holder: QkBindingViewHolder<MessageContentFilterListItemBinding>, position: Int) {
-        val item = getItem(position)!!
+        val item = getItem(position) ?: return
         holder.binding.caseIcon.visibility = if (item.caseSensitive) View.VISIBLE else View.GONE
         holder.binding.regexIcon.visibility = if (item.isRegex) View.VISIBLE else View.GONE
         holder.binding.contactsIcon.visibility = if (item.includeContacts) View.VISIBLE else View.GONE

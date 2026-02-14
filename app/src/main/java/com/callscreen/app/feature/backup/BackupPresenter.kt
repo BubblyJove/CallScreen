@@ -148,6 +148,7 @@ class BackupPresenter @Inject constructor(
                         val details = context.getString(R.string.backup_details, date, backupFile.messages)
                         newState { copy(selectedBackupDetails = details) }
                     } catch (e: Exception) {
+                        timber.log.Timber.w(e, "Failed to parse backup file")
                         newState { copy(showSelectedBackupError = true) }
                     }
                 }

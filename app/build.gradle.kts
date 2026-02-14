@@ -31,10 +31,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Perf: R8 full-mode enabled via proguard-android-optimize.txt above
         }
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
+            // Perf: skip PNG crunching in debug builds
+            isCrunchPngs = false
         }
     }
 
@@ -45,6 +48,12 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        // Perf: skip runtime null checks on non-null parameters for smaller/faster code
+        freeCompilerArgs += listOf(
+            "-Xno-param-assertions",
+            "-Xno-call-assertions",
+            "-Xno-receiver-assertions"
+        )
     }
 
     buildFeatures {
@@ -59,7 +68,18 @@ android {
 
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Perf: exclude unnecessary metadata to reduce APK size
+            excludes += setOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "/META-INF/NOTICE.md",
+                "/META-INF/LICENSE.md",
+                "/META-INF/*.kotlin_module",
+                "/META-INF/versions/**",
+                "/kotlin/**",
+                "/DebugProbesKt.bin",
+                "/*.txt",
+                "/*.html"
+            )
         }
     }
 }
@@ -92,7 +112,8 @@ dependencies {
 
     // AutoDispose
     implementation("com.uber.autodispose:autodispose-android-archcomponents:1.4.0")
-    implementation("com.uber.autodispose:autodispose-android-archcomponents-test:1.4.0")
+    // Perf: moved test artifact from implementation to debugImplementation
+    debugImplementation("com.uber.autodispose:autodispose-android-archcomponents-test:1.4.0")
     implementation("com.uber.autodispose:autodispose-android:1.4.0")
     implementation("com.uber.autodispose:autodispose:1.4.0")
     implementation("com.uber.autodispose:autodispose-lifecycle:1.4.0")
@@ -112,7 +133,10 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-extensions:2.2.0")
+    // Perf: lifecycle-extensions is deprecated and pulls in all lifecycle modules;
+    // use only the specific modules needed (already declared above)
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.7.0")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 

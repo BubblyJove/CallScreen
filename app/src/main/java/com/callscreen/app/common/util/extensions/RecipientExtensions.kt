@@ -64,8 +64,9 @@ fun Recipient.getThemedIcon(context: Context, theme: Colors.Theme, width: Int, h
             iconView.layoutParams = FrameLayout.LayoutParams((width * 0.5).toInt(), (height * 0.5).toInt(),
                 Gravity.CENTER)
 
-            if (contact != null) {
-                val initials = contact!!.name
+            val contactRef = contact
+            if (contactRef != null) {
+                val initials = contactRef.name
                     .substringBefore(',')
                     .split(" ")
                     .filter { name -> name.isNotEmpty() }

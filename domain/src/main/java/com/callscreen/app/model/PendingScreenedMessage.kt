@@ -17,10 +17,10 @@ open class PendingScreenedMessage : RealmObject() {
     var statusString: String = MessageStatus.HELD.name
 
     var type: MessageType
-        get() = MessageType.valueOf(typeString)
+        get() = try { MessageType.valueOf(typeString) } catch (e: IllegalArgumentException) { MessageType.SMS }
         set(value) { typeString = value.name }
 
     var status: MessageStatus
-        get() = MessageStatus.valueOf(statusString)
+        get() = try { MessageStatus.valueOf(statusString) } catch (e: IllegalArgumentException) { MessageStatus.HELD }
         set(value) { statusString = value.name }
 }

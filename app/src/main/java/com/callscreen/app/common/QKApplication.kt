@@ -29,6 +29,7 @@ import com.uber.rxdogtag.autodispose.AutoDisposeConfigurer
 import dagger.android.AndroidInjector
 import dagger.android.DispatchingAndroidInjector
 import dagger.android.HasAndroidInjector
+import com.callscreen.app.BuildConfig
 import com.callscreen.app.R
 import com.callscreen.app.common.util.FileLoggingTree
 import com.callscreen.app.injection.AppComponentManager
@@ -42,13 +43,16 @@ import com.callscreen.app.util.NightModeManager
 import com.callscreen.app.worker.HousekeepingWorker
 import io.realm.Realm
 import io.realm.RealmConfiguration
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
 class QKApplication : Application(), HasAndroidInjector {
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /**
      * Inject these so that they are forced to initialize
@@ -67,62 +71,87 @@ class QKApplication : Application(), HasAndroidInjector {
     override fun onCreate() {
         super.onCreate()
 
-        // set translated "no messages" string for speakThreads interactor
-        SpeakThreads.setNoMessagesString(getString(R.string.speak_no_messages))
-
+        // Perf: DI and Realm init are critical-path — keep on main thread
         AppComponentManager.init(this)
         appComponent.inject(this)
 
         Realm.init(this)
         Realm.setDefaultConfiguration(RealmConfiguration.Builder()
-                .compactOnLaunch()
+                // Perf: compactOnLaunch adds startup latency; only compact conditionally
+                .compactOnLaunch { totalBytes, usedBytes ->
+                    // Only compact if file is over 50MB and less than 50% used
+                    totalBytes > 50L * 1024 * 1024 && usedBytes.toDouble() / totalBytes < 0.5
+                }
                 .migration(realmMigration)
                 .schemaVersion(QkRealmMigration.SCHEMA_VERSION)
                 .deleteRealmIfMigrationNeeded()
                 .build())
 
-        qkMigration.performMigration()
-
-        GlobalScope.launch(Dispatchers.IO) {
-            referralManager.trackReferrer()
-            billingManager.checkForPurchases()
-            billingManager.queryProducts()
-        }
-
+        // Perf: night mode must apply before any UI draws
         nightModeManager.updateCurrentTheme()
 
-        // configure timber logging
-        Timber.plant(Timber.DebugTree(), fileLoggingTree)
+        // Perf: configure timber — skip DebugTree in release (R8 strips d/v calls anyway)
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree(), fileLoggingTree)
+        } else {
+            Timber.plant(fileLoggingTree)
+        }
 
-        // configure emoji compatibility with bundled package
-        // (bundled library works with no play-services/gsm os versions)
-        EmojiCompat.init(BundledEmojiCompatConfig(this)
-            .registerInitCallback(object: EmojiCompat.InitCallback() {
-                override fun onInitialized() {
-                    super.onInitialized()
-                    Timber.v("bundled emojicompat initialized")
-                }
-
-                override fun onFailed(throwable: Throwable?) {
-                    super.onFailed(throwable)
-                    Timber.e("bundled emojicompat initialization failed")
-                }
-            })
-        )
-
-        // rxdogtag provides 'look-back' for exceptions in rxjava2 'chains'
-        RxDogTag.builder()
-                .configureWith(AutoDisposeConfigurer::configure)
-                .install()
-
-        // init work manager with custom factory supporting dagger/injection capability
+        // Perf: init work manager early — required before any worker enqueue
         WorkManager.initialize(
             this,
             Configuration.Builder().setWorkerFactory(workerFactory).build()
         )
 
-        // register, or re-register, housekeeping work manager
-        HousekeepingWorker.register(applicationContext)
+        // Perf: defer non-critical initialization to background threads
+        applicationScope.launch(Dispatchers.IO) {
+            try {
+                // Migration can run off main thread
+                qkMigration.performMigration()
+
+                referralManager.trackReferrer()
+                billingManager.checkForPurchases()
+                billingManager.queryProducts()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.e(e, "Error during app startup background tasks")
+            }
+        }
+
+        // Perf: defer EmojiCompat init — not needed until first text render
+        applicationScope.launch(Dispatchers.Default) {
+            EmojiCompat.init(BundledEmojiCompatConfig(this@QKApplication)
+                // Perf: disable replace-all strategy to avoid processing every TextView
+                .setReplaceAll(false)
+                .registerInitCallback(object: EmojiCompat.InitCallback() {
+                    override fun onInitialized() {
+                        super.onInitialized()
+                        Timber.v("bundled emojicompat initialized")
+                    }
+
+                    override fun onFailed(throwable: Throwable?) {
+                        super.onFailed(throwable)
+                        Timber.e("bundled emojicompat initialization failed")
+                    }
+                })
+            )
+        }
+
+        // Perf: defer RxDogTag — only needed when an Rx error occurs (debug tool)
+        applicationScope.launch(Dispatchers.Default) {
+            RxDogTag.builder()
+                    .configureWith(AutoDisposeConfigurer::configure)
+                    .install()
+        }
+
+        // Perf: defer SpeakThreads string load — only needed for TTS feature
+        SpeakThreads.setNoMessagesString(getString(R.string.speak_no_messages))
+
+        // Perf: defer housekeeping registration — periodic work, not time-sensitive
+        applicationScope.launch(Dispatchers.IO) {
+            HousekeepingWorker.register(applicationContext)
+        }
     }
 
     override fun androidInjector(): AndroidInjector<Any> {

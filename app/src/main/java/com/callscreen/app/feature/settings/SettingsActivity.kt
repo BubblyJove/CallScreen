@@ -23,16 +23,18 @@ import com.bluelinelabs.conductor.Conductor
 import com.bluelinelabs.conductor.Router
 import com.bluelinelabs.conductor.RouterTransaction
 import dagger.android.AndroidInjection
-import com.callscreen.app.common.base.QkThemedActivity
+import com.callscreen.app.R
+import com.callscreen.app.common.base.QkActivity
 import com.callscreen.app.databinding.ContainerActivityBinding
 
-class SettingsActivity : QkThemedActivity() {
+class SettingsActivity : QkActivity() {
 
     private lateinit var binding: ContainerActivityBinding
     private lateinit var router: Router
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
+        setTheme(if (prefs.black.get()) R.style.AppTheme_Black else R.style.AppTheme)
         super.onCreate(savedInstanceState)
         binding = ContainerActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)

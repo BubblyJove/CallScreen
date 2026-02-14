@@ -47,6 +47,7 @@ import com.callscreen.app.ui.theme.CallScreenTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 class OnboardingActivity : ComponentActivity() {
 
     // Compose pager state + scope are bridged via these fields, set in setContent
@@ -84,7 +85,6 @@ class OnboardingActivity : ComponentActivity() {
         advanceToNextPage()
     }
 
-    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

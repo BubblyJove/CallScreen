@@ -51,7 +51,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import com.google.android.flexbox.FlexboxLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.jakewharton.rxbinding2.view.clicks
@@ -160,7 +159,7 @@ class ComposeActivity : QkThemedActivity(), ComposeView {
 
     private var seekBarUpdater: Disposable? = null
 
-    private val viewModel by lazy { ViewModelProviders.of(this, viewModelFactory)[ComposeViewModel::class.java] }
+    private val viewModel by lazy { ViewModelProvider(this, viewModelFactory)[ComposeViewModel::class.java] }
 
     private var cameraDestination: Uri? = null
 
@@ -326,7 +325,7 @@ class ComposeActivity : QkThemedActivity(), ComposeView {
                         QkMediaPlayer.PlayingState.Playing -> {
                             binding.audioMsgPlayerPlayPause.tag = QkMediaPlayer.PlayingState.Playing
                             QkMediaPlayer.start()
-                            binding.audioMsgPlayerPlayPause.setImageResource(R.drawable.exo_icon_pause)
+                            binding.audioMsgPlayerPlayPause.setImageResource(R.drawable.ic_pause)
                             seekBarUpdater = getSeekBarUpdater().subscribe {
                                 binding.audioMsgPlayerSeekBar.progress = QkMediaPlayer.currentPosition
                                 binding.audioMsgPlayerSeekBar.max = QkMediaPlayer.duration
@@ -337,14 +336,14 @@ class ComposeActivity : QkThemedActivity(), ComposeView {
                         QkMediaPlayer.PlayingState.Paused -> {
                             binding.audioMsgPlayerPlayPause.tag = QkMediaPlayer.PlayingState.Paused
                             QkMediaPlayer.pause()
-                            binding.audioMsgPlayerPlayPause.setImageResource(R.drawable.exo_icon_play)
+                            binding.audioMsgPlayerPlayPause.setImageResource(R.drawable.ic_play_arrow)
                             seekBarUpdater?.dispose()
                         }
 
                         else -> {
                             binding.audioMsgPlayerPlayPause.tag = QkMediaPlayer.PlayingState.Stopped
                             QkMediaPlayer.reset()
-                            binding.audioMsgPlayerPlayPause.setImageResource(R.drawable.exo_icon_play)
+                            binding.audioMsgPlayerPlayPause.setImageResource(R.drawable.ic_play_arrow)
                             seekBarUpdater?.dispose()
                             binding.audioMsgPlayerSeekBar.progress = 0
                             binding.audioMsgPlayerSeekBar.isEnabled = false

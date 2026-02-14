@@ -22,7 +22,6 @@ import android.graphics.Typeface
 import android.os.Bundle
 import androidx.core.view.children
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import com.jakewharton.rxbinding2.view.clicks
 import dagger.android.AndroidInjection
 import com.callscreen.app.R
@@ -49,7 +48,7 @@ class PlusActivity : QkThemedActivity(), PlusView {
     @Inject lateinit var upgradeButtonExperiment: UpgradeButtonExperiment
     @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
 
-    private val viewModel by lazy { ViewModelProviders.of(this, viewModelFactory)[PlusViewModel::class.java] }
+    private val viewModel by lazy { ViewModelProvider(this, viewModelFactory)[PlusViewModel::class.java] }
     private lateinit var binding: QksmsPlusActivityBinding
 
     override val upgradeIntent get() = binding.upgrade.clicks()

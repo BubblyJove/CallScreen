@@ -47,6 +47,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import com.callscreen.app.util.ScreenLog
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -89,6 +90,9 @@ class QKApplication : Application(), HasAndroidInjector {
 
         // Perf: night mode must apply before any UI draws
         nightModeManager.updateCurrentTheme()
+
+        ScreenLog.d("App", "CallScreen starting — API ${android.os.Build.VERSION.SDK_INT} (${android.os.Build.MODEL})")
+        ScreenLog.d("App", "Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD_TYPE})")
 
         // Perf: configure timber — skip DebugTree in release (R8 strips d/v calls anyway)
         if (BuildConfig.DEBUG) {

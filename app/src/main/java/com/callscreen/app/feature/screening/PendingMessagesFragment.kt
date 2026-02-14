@@ -13,6 +13,7 @@ import com.callscreen.app.model.PendingScreenedMessage
 import com.callscreen.app.repository.ScreeningRepository
 import dagger.android.support.AndroidSupportInjection
 import io.realm.RealmResults
+import timber.log.Timber
 import javax.inject.Inject
 
 class PendingMessagesFragment : Fragment() {
@@ -22,7 +23,11 @@ class PendingMessagesFragment : Fragment() {
     private var pendingMessages: RealmResults<PendingScreenedMessage>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        AndroidSupportInjection.inject(this)
+        try {
+            AndroidSupportInjection.inject(this)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to inject PendingMessagesFragment")
+        }
         super.onCreate(savedInstanceState)
     }
 
@@ -30,6 +35,12 @@ class PendingMessagesFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_pending_messages, container, false)
         val recyclerView = view.findViewById<RecyclerView>(R.id.recyclerView)
         val emptyView = view.findViewById<TextView>(R.id.emptyView)
+
+        // Show empty state by default
+        recyclerView.visibility = View.GONE
+        emptyView.visibility = View.VISIBLE
+
+        if (!::screeningRepository.isInitialized) return view
 
         recyclerView.layoutManager = LinearLayoutManager(context)
 

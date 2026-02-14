@@ -134,4 +134,17 @@ class CryptoRepositoryImpl @Inject constructor(
     override fun setPreferredTokenType(tokenType: CryptoPaymentChallenge.TokenType) {
         sharedPrefs.edit().putString(PREF_TOKEN_TYPE, tokenType.name).apply()
     }
+
+    override fun getActivePendingChallenges(): List<CryptoPaymentChallenge> {
+        return Realm.getDefaultInstance().use { realm ->
+            val results = realm.where(CryptoPaymentChallenge::class.java)
+                .`in`("statusString", arrayOf(
+                    CryptoPaymentChallenge.PaymentStatus.PENDING.name,
+                    CryptoPaymentChallenge.PaymentStatus.CONFIRMING.name
+                ))
+                .greaterThan("expiresAt", System.currentTimeMillis())
+                .findAll()
+            realm.copyFromRealm(results)
+        }
+    }
 }

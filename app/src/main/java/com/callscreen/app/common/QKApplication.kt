@@ -32,15 +32,20 @@ import dagger.android.HasAndroidInjector
 import com.callscreen.app.BuildConfig
 import com.callscreen.app.R
 import com.callscreen.app.common.util.FileLoggingTree
+import com.callscreen.app.crypto.Web3Service
 import com.callscreen.app.injection.AppComponentManager
 import com.callscreen.app.injection.appComponent
+import com.callscreen.app.interactor.MonitorCryptoPayment
 import com.callscreen.app.interactor.SpeakThreads
+import com.callscreen.app.model.CryptoPaymentChallenge
+import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.manager.BillingManager
 import com.callscreen.app.manager.ReferralManager
 import com.callscreen.app.migration.QkMigration
 import com.callscreen.app.migration.QkRealmMigration
 import com.callscreen.app.util.NightModeManager
 import com.callscreen.app.worker.HousekeepingWorker
+import io.reactivex.schedulers.Schedulers
 import io.realm.Realm
 import io.realm.RealmConfiguration
 import kotlinx.coroutines.CoroutineScope
@@ -68,6 +73,9 @@ class QKApplication : Application(), HasAndroidInjector {
     @Inject lateinit var realmMigration: QkRealmMigration
     @Inject lateinit var referralManager: ReferralManager
     @Inject lateinit var workerFactory: WorkerFactory
+    @Inject lateinit var cryptoRepository: CryptoRepository
+    @Inject lateinit var web3Service: Web3Service
+    @Inject lateinit var monitorCryptoPayment: MonitorCryptoPayment
 
     override fun onCreate() {
         super.onCreate()
@@ -152,9 +160,53 @@ class QKApplication : Application(), HasAndroidInjector {
         // Perf: defer SpeakThreads string load — only needed for TTS feature
         SpeakThreads.setNoMessagesString(getString(R.string.speak_no_messages))
 
+        // Resume payment monitoring for any active crypto challenges
+        applicationScope.launch(Dispatchers.IO) {
+            resumeCryptoPaymentMonitoring()
+        }
+
         // Perf: defer housekeeping registration — periodic work, not time-sensitive
         applicationScope.launch(Dispatchers.IO) {
             HousekeepingWorker.register(applicationContext)
+        }
+    }
+
+    private fun resumeCryptoPaymentMonitoring() {
+        try {
+            if (!cryptoRepository.isCryptoChallengeEnabled()) return
+
+            val activeChallenges = cryptoRepository.getActivePendingChallenges()
+            if (activeChallenges.isEmpty()) {
+                ScreenLog.d(TAG, "No active crypto challenges to resume")
+                return
+            }
+
+            ScreenLog.d(TAG, "Resuming payment monitoring for ${activeChallenges.size} challenge(s)")
+            for (challenge in activeChallenges) {
+                if (web3Service.isMonitoring(challenge.id)) continue
+                ScreenLog.d(TAG, "Resuming monitor for ${challenge.phoneNumber} (${challenge.id})")
+                web3Service.monitorPayment(challenge)
+                    .subscribeOn(Schedulers.io())
+                    .subscribe({ event ->
+                        when (event.status) {
+                            CryptoPaymentChallenge.PaymentStatus.CONFIRMING -> {
+                                ScreenLog.d(TAG, "Payment detected for ${challenge.phoneNumber}: tx=${event.txHash}")
+                                monitorCryptoPayment.onPaymentDetected(event.challengeId, event.txHash)
+                            }
+                            CryptoPaymentChallenge.PaymentStatus.CONFIRMED -> {
+                                ScreenLog.d(TAG, "Payment CONFIRMED for ${challenge.phoneNumber} (${event.confirmations} blocks)")
+                                monitorCryptoPayment.onConfirmationUpdate(event.challengeId, event.confirmations, event.txHash)
+                            }
+                            else -> {
+                                monitorCryptoPayment.onConfirmationUpdate(event.challengeId, event.confirmations, event.txHash)
+                            }
+                        }
+                    }, { error ->
+                        ScreenLog.e(TAG, "Payment monitor error for ${challenge.phoneNumber}", error)
+                    })
+            }
+        } catch (e: Exception) {
+            ScreenLog.e(TAG, "Failed to resume crypto payment monitoring", e)
         }
     }
 
@@ -162,4 +214,7 @@ class QKApplication : Application(), HasAndroidInjector {
         return androidInjector
     }
 
+    companion object {
+        private const val TAG = "App"
+    }
 }

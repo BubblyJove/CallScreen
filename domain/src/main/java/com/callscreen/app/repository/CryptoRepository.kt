@@ -62,4 +62,6 @@ interface CryptoRepository {
 
     fun setPreferredTokenType(tokenType: CryptoPaymentChallenge.TokenType)
 
+    fun getActivePendingChallenges(): List<CryptoPaymentChallenge>
+
 }

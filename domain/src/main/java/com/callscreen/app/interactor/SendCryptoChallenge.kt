@@ -5,8 +5,8 @@ import com.callscreen.app.model.CryptoPaymentChallenge
 import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
+import com.callscreen.app.util.ScreenLog
 import io.reactivex.Flowable
-import timber.log.Timber
 import javax.inject.Inject
 
 class SendCryptoChallenge @Inject constructor(
@@ -31,7 +31,7 @@ class SendCryptoChallenge @Inject constructor(
             // Check for existing active challenge
             val existing = cryptoRepository.getActivePaymentChallenge(params.phoneNumber)
             if (existing != null && !existing.isExpired()) {
-                Timber.d("Reusing existing crypto challenge for ${params.phoneNumber}")
+                ScreenLog.d(TAG, "Reusing existing crypto challenge for ${params.phoneNumber}")
                 sendChallengeMessage(params.phoneNumber, existing)
                 return@fromCallable existing
             }
@@ -59,10 +59,11 @@ class SendCryptoChallenge @Inject constructor(
                 this.type = ChallengeState.ChallengeType.CRYPTO
             }
             screeningRepository.saveChallengeState(challengeState)
+            ScreenLog.d(TAG, "ChallengeState saved for ${params.phoneNumber}")
 
             sendChallengeMessage(params.phoneNumber, challenge)
 
-            Timber.d("Sent crypto challenge to ${params.phoneNumber}: $exactAmount ${tokenType.name} to $walletAddress")
+            ScreenLog.d(TAG, "Sent crypto challenge to ${params.phoneNumber}: $exactAmount ${tokenType.name} to $walletAddress")
             challenge
         }
     }
@@ -88,6 +89,8 @@ class SendCryptoChallenge @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "CryptoChallenge"
+
         /**
          * Generate exact payment amount with random nonce digits for uniqueness.
          *

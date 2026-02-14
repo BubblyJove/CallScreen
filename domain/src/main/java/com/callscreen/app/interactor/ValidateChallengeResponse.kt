@@ -3,8 +3,8 @@ package com.callscreen.app.interactor
 import com.callscreen.app.model.WhitelistedContact
 import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
+import com.callscreen.app.util.ScreenLog
 import io.reactivex.Flowable
-import timber.log.Timber
 import javax.inject.Inject
 
 class ValidateChallengeResponse @Inject constructor(
@@ -27,19 +27,18 @@ class ValidateChallengeResponse @Inject constructor(
             val challenge = screeningRepository.getChallengeForNumber(params.phoneNumber)
 
             if (challenge == null) {
-                // Perf: use %s format to avoid string concat when logging is stripped
-                Timber.d("No challenge found for %s", params.phoneNumber)
+                ScreenLog.d(TAG, "No challenge found for ${params.phoneNumber}")
                 return@fromCallable Result.NoChallengeFound
             }
 
             if (challenge.isExpired()) {
-                Timber.d("Challenge expired for %s", params.phoneNumber)
+                ScreenLog.d(TAG, "Challenge expired for ${params.phoneNumber}")
                 screeningRepository.deleteChallengeState(params.phoneNumber)
                 return@fromCallable Result.Expired
             }
 
             if (!challenge.hasAttemptsRemaining()) {
-                Timber.d("Max attempts reached for %s", params.phoneNumber)
+                ScreenLog.d(TAG, "Max attempts reached for ${params.phoneNumber}")
                 return@fromCallable Result.MaxAttempts
             }
 
@@ -51,7 +50,7 @@ class ValidateChallengeResponse @Inject constructor(
             val expected = challenge.expectedAnswer.trim()
 
             if (answer.equals(expected, ignoreCase = true)) {
-                Timber.d("Challenge passed for %s", params.phoneNumber)
+                ScreenLog.d(TAG, "Challenge PASSED for ${params.phoneNumber}")
 
                 // Whitelist contact
                 screeningRepository.whitelistContact(
@@ -62,6 +61,7 @@ class ValidateChallengeResponse @Inject constructor(
 
                 // Insert held messages into Quik DB so they appear in conversation history
                 val pending = screeningRepository.getPendingMessagesForNumberSync(params.phoneNumber)
+                ScreenLog.d(TAG, "Inserting ${pending.size} held messages for ${params.phoneNumber}")
                 pending.forEach { msg ->
                     messageRepository.insertReceivedSms(-1, msg.phoneNumber, msg.body, msg.timestamp)
                 }
@@ -75,8 +75,12 @@ class ValidateChallengeResponse @Inject constructor(
                 return@fromCallable Result.Success
             }
 
-            Timber.d("Wrong answer from %s: got '%s', expected '%s'", params.phoneNumber, answer, expected)
+            ScreenLog.d(TAG, "Wrong answer from ${params.phoneNumber}: got '$answer', expected '$expected'")
             Result.WrongAnswer
         }
+    }
+
+    companion object {
+        private const val TAG = "Validate"
     }
 }

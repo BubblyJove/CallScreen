@@ -3,14 +3,16 @@ package com.callscreen.app.interactor
 import com.callscreen.app.model.CryptoPaymentChallenge
 import com.callscreen.app.model.WhitelistedContact
 import com.callscreen.app.repository.CryptoRepository
+import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
+import com.callscreen.app.util.ScreenLog
 import io.reactivex.Flowable
-import timber.log.Timber
 import javax.inject.Inject
 
 class MonitorCryptoPayment @Inject constructor(
     private val cryptoRepository: CryptoRepository,
-    private val screeningRepository: ScreeningRepository
+    private val screeningRepository: ScreeningRepository,
+    private val messageRepository: MessageRepository
 ) : Interactor<MonitorCryptoPayment.Params>() {
 
     data class Params(val challengeId: String)
@@ -29,17 +31,16 @@ class MonitorCryptoPayment @Inject constructor(
                 return@create
             }
 
-            Timber.d("Starting payment monitor for challenge ${params.challengeId}")
+            ScreenLog.d(TAG, "Starting payment monitor for challenge ${params.challengeId}")
 
             // Emit current status
             emitter.onNext(PaymentStatus(challenge.status, challenge.confirmations, challenge.txHash))
 
             // The actual WebSocket monitoring is handled by AlchemyWebSocketService
             // This interactor is called by the service when payment events occur
-            // For now, this provides the status polling mechanism
 
             emitter.setCancellable {
-                Timber.d("Payment monitor cancelled for ${params.challengeId}")
+                ScreenLog.d(TAG, "Payment monitor cancelled for ${params.challengeId}")
             }
         }, io.reactivex.BackpressureStrategy.LATEST)
     }
@@ -48,7 +49,7 @@ class MonitorCryptoPayment @Inject constructor(
      * Called when a matching transaction is detected by the WebSocket service.
      */
     fun onPaymentDetected(challengeId: String, txHash: String) {
-        Timber.d("Payment detected for challenge $challengeId: $txHash")
+        ScreenLog.d(TAG, "Payment detected for challenge $challengeId: $txHash")
         cryptoRepository.updateChallengeStatus(
             id = challengeId,
             status = CryptoPaymentChallenge.PaymentStatus.CONFIRMING,
@@ -61,7 +62,7 @@ class MonitorCryptoPayment @Inject constructor(
      * Called when confirmation count updates.
      */
     fun onConfirmationUpdate(challengeId: String, confirmations: Int, txHash: String) {
-        Timber.d("Confirmation update for $challengeId: $confirmations/${ CryptoPaymentChallenge.REQUIRED_CONFIRMATIONS}")
+        ScreenLog.d(TAG, "Confirmation update for $challengeId: $confirmations/${CryptoPaymentChallenge.REQUIRED_CONFIRMATIONS}")
 
         if (confirmations >= CryptoPaymentChallenge.REQUIRED_CONFIRMATIONS) {
             // Payment fully confirmed
@@ -75,13 +76,28 @@ class MonitorCryptoPayment @Inject constructor(
             // Whitelist the caller
             val challenge = cryptoRepository.getPaymentChallengeById(challengeId)
             if (challenge != null) {
+                ScreenLog.d(TAG, "Whitelisting ${challenge.phoneNumber} via crypto payment")
+
                 screeningRepository.whitelistContact(
                     challenge.phoneNumber,
                     challenge.phoneNumber,
                     WhitelistedContact.WhitelistSource.CRYPTO_PAID
                 )
+
+                // Insert held messages into Quik DB so they appear in conversation history
+                val pending = screeningRepository.getPendingMessagesForNumberSync(challenge.phoneNumber)
+                ScreenLog.d(TAG, "Inserting ${pending.size} held messages for ${challenge.phoneNumber}")
+                pending.forEach { msg ->
+                    messageRepository.insertReceivedSms(-1, msg.phoneNumber, msg.body, msg.timestamp)
+                }
+
+                // Mark pending messages as delivered
                 screeningRepository.deliverPendingMessages(challenge.phoneNumber)
-                Timber.d("Contact whitelisted via crypto payment: ${challenge.phoneNumber}")
+
+                // Clean up challenge state
+                screeningRepository.deleteChallengeState(challenge.phoneNumber)
+
+                ScreenLog.d(TAG, "Contact whitelisted via crypto payment: ${challenge.phoneNumber}")
             }
         } else {
             cryptoRepository.updateChallengeStatus(
@@ -91,5 +107,9 @@ class MonitorCryptoPayment @Inject constructor(
                 txHash = txHash
             )
         }
+    }
+
+    companion object {
+        private const val TAG = "CryptoPayment"
     }
 }

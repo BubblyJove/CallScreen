@@ -11,9 +11,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.callscreen.app.R
 import com.callscreen.app.model.ChallengeState
 import com.callscreen.app.repository.ScreeningRepository
+import com.callscreen.app.util.ScreenLog
 import dagger.android.support.AndroidSupportInjection
 import io.realm.RealmResults
-import timber.log.Timber
 import javax.inject.Inject
 
 class ActiveChallengesFragment : Fragment() {
@@ -25,8 +25,9 @@ class ActiveChallengesFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
             AndroidSupportInjection.inject(this)
+            ScreenLog.d(TAG, "Injection succeeded")
         } catch (e: Exception) {
-            Timber.e(e, "Failed to inject ActiveChallengesFragment")
+            ScreenLog.e(TAG, "Injection FAILED", e)
         }
         super.onCreate(savedInstanceState)
     }
@@ -41,13 +42,18 @@ class ActiveChallengesFragment : Fragment() {
         emptyView.visibility = View.VISIBLE
         emptyView.text = getString(R.string.screening_no_challenges)
 
-        if (!::screeningRepository.isInitialized) return view
+        if (!::screeningRepository.isInitialized) {
+            ScreenLog.w(TAG, "screeningRepository not initialized, returning empty view")
+            return view
+        }
 
         recyclerView.layoutManager = LinearLayoutManager(context)
 
         challenges = screeningRepository.getActiveChallenges()
         recyclerView.adapter = ChallengeAdapter(challenges!!)
+        ScreenLog.d(TAG, "Adapter set, initial size=${challenges?.size ?: 0}")
         challenges?.addChangeListener { results ->
+            ScreenLog.d(TAG, "Change listener fired: ${results.size} results")
             if (results.isEmpty()) {
                 recyclerView.visibility = View.GONE
                 emptyView.visibility = View.VISIBLE
@@ -63,5 +69,9 @@ class ActiveChallengesFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         challenges?.removeAllChangeListeners()
+    }
+
+    companion object {
+        private const val TAG = "Challenges"
     }
 }

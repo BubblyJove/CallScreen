@@ -11,9 +11,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.callscreen.app.R
 import com.callscreen.app.model.PendingScreenedMessage
 import com.callscreen.app.repository.ScreeningRepository
+import com.callscreen.app.util.ScreenLog
 import dagger.android.support.AndroidSupportInjection
 import io.realm.RealmResults
-import timber.log.Timber
 import javax.inject.Inject
 
 class PendingMessagesFragment : Fragment() {
@@ -25,8 +25,9 @@ class PendingMessagesFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
             AndroidSupportInjection.inject(this)
+            ScreenLog.d(TAG, "Injection succeeded")
         } catch (e: Exception) {
-            Timber.e(e, "Failed to inject PendingMessagesFragment")
+            ScreenLog.e(TAG, "Injection FAILED", e)
         }
         super.onCreate(savedInstanceState)
     }
@@ -40,13 +41,18 @@ class PendingMessagesFragment : Fragment() {
         recyclerView.visibility = View.GONE
         emptyView.visibility = View.VISIBLE
 
-        if (!::screeningRepository.isInitialized) return view
+        if (!::screeningRepository.isInitialized) {
+            ScreenLog.w(TAG, "screeningRepository not initialized, returning empty view")
+            return view
+        }
 
         recyclerView.layoutManager = LinearLayoutManager(context)
 
         pendingMessages = screeningRepository.getPendingMessages()
         recyclerView.adapter = PendingMessageAdapter(pendingMessages!!)
+        ScreenLog.d(TAG, "Adapter set, initial size=${pendingMessages?.size ?: 0}")
         pendingMessages?.addChangeListener { results ->
+            ScreenLog.d(TAG, "Change listener fired: ${results.size} results")
             if (results.isEmpty()) {
                 recyclerView.visibility = View.GONE
                 emptyView.visibility = View.VISIBLE
@@ -62,5 +68,9 @@ class PendingMessagesFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         pendingMessages?.removeAllChangeListeners()
+    }
+
+    companion object {
+        private const val TAG = "PendingMsgs"
     }
 }

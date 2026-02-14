@@ -28,19 +28,22 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import dagger.android.AndroidInjection
 import com.callscreen.app.crypto.CryptoPriceOracle
+import com.callscreen.app.crypto.Web3Service
 import com.callscreen.app.interactor.CheckNumberTrusted
+import com.callscreen.app.interactor.MonitorCryptoPayment
 import com.callscreen.app.interactor.SendCryptoChallenge
 import com.callscreen.app.interactor.SendMathChallenge
 import com.callscreen.app.interactor.ValidateChallengeResponse
+import com.callscreen.app.model.CryptoPaymentChallenge
 import com.callscreen.app.model.PendingScreenedMessage
 import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
+import com.callscreen.app.util.ScreenLog
 import com.callscreen.app.worker.ReceiveSmsWorker
 import com.callscreen.app.worker.ReceiveSmsWorker.Companion.INPUT_DATA_KEY_MESSAGE_ID
 import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
-import timber.log.Timber
 import javax.inject.Inject
 
 class SmsReceivedReceiver : BroadcastReceiver() {
@@ -51,6 +54,8 @@ class SmsReceivedReceiver : BroadcastReceiver() {
     @Inject lateinit var sendMathChallenge: SendMathChallenge
     @Inject lateinit var sendCryptoChallenge: SendCryptoChallenge
     @Inject lateinit var cryptoPriceOracle: CryptoPriceOracle
+    @Inject lateinit var web3Service: Web3Service
+    @Inject lateinit var monitorCryptoPayment: MonitorCryptoPayment
     @Inject lateinit var validateChallengeResponse: ValidateChallengeResponse
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -64,7 +69,7 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                 .map {
                     val address = messages[0].displayOriginatingAddress ?: ""
                     if (address.isBlank()) {
-                        Timber.w("SMS received with blank address, skipping screening")
+                        ScreenLog.w(TAG, "SMS received with blank address, skipping screening")
                         return@map 0L
                     }
                     // Perf: use StringBuilder to concatenate multi-part SMS bodies
@@ -81,14 +86,13 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                     val subId = intent.extras?.getInt("subscription", -1) ?: -1
                     val timestamp = messages[0].timestampMillis
 
-                    Timber.v("SMS received from $address: ${body.take(50)}")
+                    ScreenLog.d(TAG, "SMS received from $address: ${body.take(50)}")
 
                     try {
                         // Step 1: Check if this is a challenge response
                         val challenge = screeningRepository.getChallengeForNumber(address)
                         if (challenge != null && !challenge.isExpired()) {
-                            Timber.d("Potential challenge response from $address")
-                            // Perf: all branches insert normally — validate then insert once
+                            ScreenLog.d(TAG, "Potential challenge response from $address")
                             validateChallengeResponse
                                 .buildObservable(ValidateChallengeResponse.Params(address, body))
                                 .blockingFirst()
@@ -101,17 +105,18 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                             .blockingFirst()
 
                         if (trusted) {
-                            Timber.d("Trusted sender $address — inserting to Quik normally")
+                            ScreenLog.d(TAG, "Trusted sender $address — inserting normally")
                             return@map insertAndEnqueue(context, subId, address, body, timestamp)
                         }
 
                         // Step 3: Untrusted — hold message and send challenge
-                        Timber.d("Untrusted sender $address — holding message, sending challenge")
+                        ScreenLog.d(TAG, "Untrusted sender $address — holding message")
                         screeningRepository.insertPendingMessage(
                             phoneNumber = address,
                             body = body,
                             type = PendingScreenedMessage.MessageType.SMS
                         )
+                        ScreenLog.d(TAG, "Pending message saved for $address")
 
                         // Don't insert to Quik DB — screened messages stay hidden
                         // until the sender passes verification
@@ -119,26 +124,31 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                         // Send challenge (don't fail if this errors)
                         try {
                             if (cryptoRepository.isCryptoChallengeEnabled()) {
+                                ScreenLog.d(TAG, "Crypto challenge enabled, fetching ETH price")
                                 val ethPrice = cryptoPriceOracle.getEthPriceUsd()
                                 if (ethPrice != null) {
-                                    sendCryptoChallenge.buildObservable(
+                                    ScreenLog.d(TAG, "ETH price: $$ethPrice, sending crypto challenge")
+                                    val paymentChallenge = sendCryptoChallenge.buildObservable(
                                         SendCryptoChallenge.Params(address, ethPrice)
                                     ).blockingFirst()
+                                    ScreenLog.d(TAG, "Crypto challenge sent to $address, starting payment monitor")
+                                    startPaymentMonitor(paymentChallenge)
                                 } else {
-                                    // Fallback to math if price fetch fails
+                                    ScreenLog.w(TAG, "ETH price fetch failed, falling back to math challenge")
                                     sendMathChallenge.buildObservable(SendMathChallenge.Params(address)).blockingFirst()
                                 }
                             } else {
+                                ScreenLog.d(TAG, "Sending math challenge to $address")
                                 sendMathChallenge.buildObservable(SendMathChallenge.Params(address)).blockingFirst()
                             }
                         } catch (e: Exception) {
-                            Timber.w(e, "Failed to send challenge to $address")
+                            ScreenLog.e(TAG, "Failed to send challenge to $address", e)
                         }
 
                         0L
                     } catch (e: Exception) {
                         // Fail-open: on any screening error, insert to Quik normally
-                        Timber.w(e, "Screening error for $address — fail-open, inserting normally")
+                        ScreenLog.e(TAG, "Screening error for $address — fail-open", e)
                         insertAndEnqueue(context, subId, address, body, timestamp)
                     }
                 }
@@ -154,10 +164,40 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                     }
                     pendingResult.finish()
                 }, { error ->
-                    Timber.e(error, "Fatal error in SmsReceivedReceiver")
+                    ScreenLog.e(TAG, "Fatal error in SmsReceivedReceiver", error)
                     pendingResult.finish()
                 })
         } ?: pendingResult.finish()
+    }
+
+    /**
+     * Start WebSocket payment monitoring for a crypto challenge.
+     * The AlchemyWebSocketService singleton manages its own lifecycle.
+     */
+    private fun startPaymentMonitor(challenge: CryptoPaymentChallenge) {
+        try {
+            web3Service.monitorPayment(challenge)
+                .subscribeOn(Schedulers.io())
+                .subscribe({ event ->
+                    when (event.status) {
+                        CryptoPaymentChallenge.PaymentStatus.CONFIRMING -> {
+                            ScreenLog.d(TAG, "Payment detected for ${challenge.phoneNumber}: tx=${event.txHash}")
+                            monitorCryptoPayment.onPaymentDetected(event.challengeId, event.txHash)
+                        }
+                        CryptoPaymentChallenge.PaymentStatus.CONFIRMED -> {
+                            ScreenLog.d(TAG, "Payment CONFIRMED for ${challenge.phoneNumber} (${event.confirmations} blocks)")
+                            monitorCryptoPayment.onConfirmationUpdate(event.challengeId, event.confirmations, event.txHash)
+                        }
+                        else -> {
+                            monitorCryptoPayment.onConfirmationUpdate(event.challengeId, event.confirmations, event.txHash)
+                        }
+                    }
+                }, { error ->
+                    ScreenLog.e(TAG, "Payment monitor error for ${challenge.phoneNumber}", error)
+                })
+        } catch (e: Exception) {
+            ScreenLog.e(TAG, "Failed to start payment monitor", e)
+        }
     }
 
     /**
@@ -171,5 +211,9 @@ class SmsReceivedReceiver : BroadcastReceiver() {
         timestamp: Long
     ): Long {
         return messageRepo.insertReceivedSms(subId, address, body, timestamp).id
+    }
+
+    companion object {
+        private const val TAG = "SmsScreening"
     }
 }

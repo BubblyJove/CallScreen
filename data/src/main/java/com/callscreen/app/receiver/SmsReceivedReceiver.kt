@@ -92,11 +92,28 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                         // Step 1: Check if this is a challenge response
                         val challenge = screeningRepository.getChallengeForNumber(address)
                         if (challenge != null && !challenge.isExpired()) {
-                            ScreenLog.d(TAG, "Potential challenge response from $address")
-                            validateChallengeResponse
+                            ScreenLog.d(TAG, "Potential challenge response from $address: '$body'")
+                            val result = validateChallengeResponse
                                 .buildObservable(ValidateChallengeResponse.Params(address, body))
                                 .blockingFirst()
-                            return@map insertAndEnqueue(context, subId, address, body, timestamp)
+                            ScreenLog.d(TAG, "Challenge validation result for $address: ${result::class.simpleName}")
+                            return@map when (result) {
+                                is ValidateChallengeResponse.Result.Success -> {
+                                    // Sender passed — insert the response message into conversation
+                                    ScreenLog.d(TAG, "Challenge PASSED for $address — inserting response message")
+                                    insertAndEnqueue(context, subId, address, body, timestamp)
+                                }
+                                else -> {
+                                    // Wrong answer / expired / max attempts — hold this message too
+                                    ScreenLog.d(TAG, "Challenge NOT passed for $address — holding response message")
+                                    screeningRepository.insertPendingMessage(
+                                        phoneNumber = address,
+                                        body = body,
+                                        type = PendingScreenedMessage.MessageType.SMS
+                                    )
+                                    0L
+                                }
+                            }
                         }
 
                         // Step 2: Check if sender is trusted

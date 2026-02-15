@@ -7,6 +7,7 @@ import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
 import com.callscreen.app.util.ScreenLog
 import io.reactivex.Flowable
+import java.util.Locale
 import javax.inject.Inject
 
 class SendCryptoChallenge @Inject constructor(
@@ -110,13 +111,13 @@ class SendCryptoChallenge @Inject constructor(
                 CryptoPaymentChallenge.TokenType.ETH -> {
                     val ethAmount = usdAmount / ethPriceUsd
                     // Format with high precision, append nonce digits
-                    val baseStr = String.format("%.8f", ethAmount)
+                    val baseStr = String.format(Locale.US, "%.8f", ethAmount)
                     "${baseStr}${nonce}"
                 }
                 CryptoPaymentChallenge.TokenType.USDC,
                 CryptoPaymentChallenge.TokenType.USDT -> {
                     // Format with 4 decimal places, append nonce
-                    val baseStr = String.format("%.4f", usdAmount)
+                    val baseStr = String.format(Locale.US, "%.4f", usdAmount)
                     "${baseStr}${nonce}"
                 }
             }

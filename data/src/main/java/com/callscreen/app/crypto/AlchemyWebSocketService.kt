@@ -174,8 +174,9 @@ class AlchemyWebSocketService @Inject constructor(
             .post(blockNumBody.toString().toRequestBody(JSON_MEDIA_TYPE.toMediaTypeOrNull()))
             .build()
 
-        val blockNumResponse = httpClient.newCall(blockNumRequest).execute()
-        val blockNumJson = JSONObject(blockNumResponse.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return null)
+        val blockNumJson = httpClient.newCall(blockNumRequest).execute().use { resp ->
+            JSONObject(resp.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return null)
+        }
         val currentBlockHex = blockNumJson.optString("result", "") .ifBlank { return null }
         val currentBlock = BigInteger(currentBlockHex.removePrefix("0x"), 16)
 
@@ -214,8 +215,9 @@ class AlchemyWebSocketService @Inject constructor(
             .post(transfersBody.toString().toRequestBody(JSON_MEDIA_TYPE.toMediaTypeOrNull()))
             .build()
 
-        val transfersResponse = httpClient.newCall(transfersRequest).execute()
-        val transfersJson = JSONObject(transfersResponse.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return null)
+        val transfersJson = httpClient.newCall(transfersRequest).execute().use { resp ->
+            JSONObject(resp.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return null)
+        }
 
         val result = transfersJson.optJSONObject("result") ?: run {
             val error = transfersJson.optJSONObject("error")
@@ -492,9 +494,9 @@ class AlchemyWebSocketService @Inject constructor(
             .post(batchBody.toString().toRequestBody(JSON_MEDIA_TYPE.toMediaTypeOrNull()))
             .build()
 
-        val response = httpClient.newCall(httpRequest).execute()
-        val body = response.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return -1
-        val batchResponse = JSONArray(body)
+        val batchResponse = httpClient.newCall(httpRequest).execute().use { resp ->
+            JSONArray(resp.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return -1)
+        }
 
         var blockNumberHex = ""
         var currentBlockHex = ""

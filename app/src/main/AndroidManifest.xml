@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
 
     <!-- SMS permissions (required for default SMS app) -->
     <uses-permission android:name="android.permission.SEND_SMS" />
@@ -9,34 +14,127 @@
     <uses-permission android:name="android.permission.RECEIVE_MMS" />
     <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" />
 
-    <!-- Call screening -->
+    <!-- Call screening + contacts -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
 
-    <!-- Notifications -->
+    <!-- Network (crypto monitoring) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- System -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- Storage -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
-        android:name=".CallScreenApp"
-        android:allowBackup="true"
+        android:name=".common.QKApplication"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.CallScreen">
+        android:theme="@style/AppLaunchTheme">
 
-        <!-- Main Activity -->
+        <!-- Quik Main Activity (conversation list) -->
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".feature.main.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.CallScreen">
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="stateAlwaysHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MESSAGING" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
-        <!-- Call Screening Service -->
+        <!-- Quik Compose Activity (SMS/MMS compose) -->
+        <activity
+            android:name=".feature.compose.ComposeActivity"
+            android:exported="true"
+            android:parentActivityName=".feature.main.MainActivity"
+            android:windowSoftInputMode="stateHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+                <data android:scheme="sms_body" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.chooser.chooser_target_service"
+                android:value=".common.util.QkChooserTargetService" />
+        </activity>
+
+        <!-- Quik Activities -->
+        <activity android:name=".feature.messageutils.MessageUtilsActivity" />
+        <activity android:name=".feature.settings.SettingsActivity" />
+        <activity android:name=".feature.plus.PlusActivity" />
+        <activity
+            android:name=".feature.gallery.GalleryActivity"
+            android:theme="@style/AppTheme.Black" />
+        <activity android:name=".feature.conversationinfo.ConversationInfoActivity" />
+        <activity android:name=".feature.notificationprefs.NotificationPrefsActivity" />
+        <activity android:name=".feature.blocking.BlockingActivity" />
+        <activity
+            android:name=".feature.qkreply.QkReplyActivity"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/AppThemeDialog"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".feature.scheduled.ScheduledActivity" />
+        <activity android:name=".feature.backup.BackupActivity" />
+        <activity android:name=".feature.contacts.ContactsActivity" />
+
+        <!-- CallScreen: Onboarding -->
+        <activity android:name=".feature.onboarding.OnboardingActivity" />
+
+        <!-- CallScreen: Screening Dashboard -->
+        <activity android:name=".feature.screening.ScreeningActivity" />
+
+        <!-- CallScreen: Debug Log Viewer -->
+        <activity android:name=".feature.debug.DebugActivity" />
+
+        <!-- CallScreen: Crypto Settings -->
+        <activity android:name=".feature.settings.crypto.CryptoSettingsActivity" />
+
+        <!-- CallScreen: Call Screening Settings -->
+        <activity android:name=".feature.settings.screening.CallScreeningSettingsActivity" />
+
+        <!-- Call Screening Service (our addition) -->
         <service
             android:name=".screening.AppCallScreeningService"
             android:permission="android.permission.BIND_SCREENING_SERVICE"
@@ -46,32 +144,113 @@
             </intent-filter>
         </service>
 
-        <!-- SMS Receiver (for default SMS app - SMS_DELIVER) -->
+        <!-- Quik Broadcast Receivers -->
         <receiver
-            android:name=".sms.SmsDeliverReceiver"
-            android:permission="android.permission.BROADCAST_SMS"
+            android:name=".receiver.BootReceiver"
             android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".receiver.DefaultSmsChangedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.provider.action.DEFAULT_SMS_PACKAGE_CHANGED" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".receiver.SmsReceivedReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SMS_DELIVER" />
             </intent-filter>
         </receiver>
-
-        <!-- MMS Receiver (for default SMS app - WAP_PUSH_DELIVER) -->
         <receiver
-            android:name=".sms.MmsReceiver"
-            android:permission="android.permission.BROADCAST_WAP_PUSH"
-            android:exported="true">
+            android:name=".receiver.MmsWapPushReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_WAP_PUSH">
             <intent-filter>
                 <action android:name="android.provider.Telephony.WAP_PUSH_DELIVER" />
                 <data android:mimeType="application/vnd.wap.mms-message" />
             </intent-filter>
         </receiver>
-
-        <!-- Headless SMS send service (required for default SMS app) -->
-        <service
-            android:name=".sms.HeadlessSmsSendService"
-            android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE"
+        <receiver
+            android:name=".receiver.MmsReceivedReceiver"
+            android:taskAffinity="com.klinker.android.messaging.MMS_RECEIVED" />
+        <receiver android:name=".receiver.MessageSentReceiver" />
+        <receiver android:name=".receiver.MessageDeliveredReceiver" />
+        <receiver android:name=".receiver.SendScheduledMessageReceiver" />
+        <receiver android:name=".receiver.SendDelayedMessageReceiver" />
+        <receiver android:name=".receiver.DeleteMessagesReceiver" />
+        <receiver android:name=".receiver.BlockThreadReceiver" />
+        <receiver android:name=".receiver.MessageMarkReceiver" />
+        <receiver
+            android:name=".receiver.SpeakThreadsReceiver"
             android:exported="true">
+            <intent-filter>
+                <action android:name=".action.ACTION_SPEAK_MESSAGES" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".receiver.RemoteMessagingReceiver" />
+        <receiver android:name=".receiver.NightModeReceiver" />
+        <receiver
+            android:name=".receiver.SmsProviderChangedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.provider.action.EXTERNAL_PROVIDER_CHANGE" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".receiver.ResendMessageReceiver" />
+        <receiver
+            android:name=".feature.widget.WidgetSpeakUnseenProvider"
+            android:label="@string/speak_unseen_messages"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="${applicationId}.action.ACTION_NOTIFY_DATASET_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_speak_unseen_info" />
+        </receiver>
+        <receiver
+            android:name=".feature.widget.WidgetProvider"
+            android:label="@string/all_conversations_widget_title"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="${applicationId}.action.ACTION_NOTIFY_DATASET_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+        <receiver android:name=".receiver.StartActivityFromWidgetReceiver" />
+
+        <!-- Legacy SMS send-result tracker -->
+        <receiver
+            android:name=".sms.SmsSentReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.callscreen.app.SMS_SENT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Services -->
+        <service android:name="com.android.mms.transaction.TransactionService" />
+        <service android:name=".feature.backup.RestoreBackupService" />
+        <service
+            android:name=".feature.widget.WidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <service
+            android:name=".service.AutoDeleteService"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
+            android:name=".service.HeadlessSmsSendService"
+            android:exported="true"
+            android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE">
             <intent-filter>
                 <action android:name="android.intent.action.RESPOND_VIA_MESSAGE" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -81,28 +260,48 @@
                 <data android:scheme="mmsto" />
             </intent-filter>
         </service>
-
-        <!-- Compose SMS Activity (required for default SMS app) -->
-        <activity
-            android:name=".ui.ComposeSmsActivity"
-            android:exported="true">
+        <service
+            android:name=".common.util.QkChooserTargetService"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_CHOOSER_TARGET_SERVICE">
             <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SENDTO" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="sms" />
-                <data android:scheme="smsto" />
-                <data android:scheme="mms" />
-                <data android:scheme="mmsto" />
+                <action android:name="android.service.chooser.ChooserTargetService" />
             </intent-filter>
-        </activity>
+        </service>
 
-        <!-- Notification channel provider -->
+        <!-- Remove default WorkManager init -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
         <meta-data
-            android:name="com.callscreen.app.NOTIFICATION_CHANNEL"
-            android:value="callscreen_notifications" />
-
+            android:name="com.callcontrol.datashare.messaging"
+            android:value="true" />
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
     </application>
+
+    <queries>
+        <package android:name="com.cuiet.blockCalls" />
+        <package android:name="com.flexaspect.android.everycallcontrol" />
+        <package android:name="org.mistergroup.muzutozvednout" />
+        <package android:name="org.mistergroup.shouldianswer" />
+        <package android:name="org.mistergroup.shouldianswerpersonal" />
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 
 </manifest>

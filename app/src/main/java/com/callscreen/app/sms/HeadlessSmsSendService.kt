@@ -3,7 +3,8 @@ package com.callscreen.app.sms
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import android.telephony.SmsManager
+import com.callscreen.app.data.SmsRepository
+import com.callscreen.app.util.ScreenLog
 
 class HeadlessSmsSendService : Service() {
 
@@ -15,10 +16,9 @@ class HeadlessSmsSendService : Service() {
                 val message = intent.getStringExtra(Intent.EXTRA_TEXT)
                 if (!number.isNullOrBlank() && !message.isNullOrBlank()) {
                     try {
-                        val smsManager = getSystemService(SmsManager::class.java)
-                        smsManager.sendTextMessage(number, null, message, null, null)
+                        SmsRepository(this).sendMessage(number, message)
                     } catch (e: Exception) {
-                        android.util.Log.e("HeadlessSmsSend", "Failed to send", e)
+                        ScreenLog.e("HeadlessSmsSend", "Failed to send", e)
                     }
                 }
             }

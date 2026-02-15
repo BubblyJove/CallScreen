@@ -1,0 +1,44 @@
+complexity:
+  LongMethod:
+    threshold: 50
+  LargeClass:
+    threshold: 500
+  ComplexMethod:
+    threshold: 15
+
+style:
+  ForbiddenComment:
+    values:
+      - "TODO"
+      - "FIXME"
+      - "HACK"
+    active: true
+  MagicNumber:
+    active: true
+    ignoreNumbers:
+      - "-1"
+      - "0"
+      - "1"
+      - "2"
+    ignoreHashCodeFunction: true
+    ignorePropertyDeclaration: true
+    ignoreLocalVariableDeclaration: false
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+    ignoreEnums: true
+
+exceptions:
+  SwallowedException:
+    active: true
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames:
+      - "ArrayIndexOutOfBoundsException"
+      - "Error"
+      - "IllegalMonitorStateException"
+      - "NullPointerException"
+      - "IndexOutOfBoundsException"
+      - "RuntimeException"
+      - "Throwable"

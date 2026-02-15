@@ -26,15 +26,15 @@ import io.realm.RealmQuery
 import io.realm.RealmResults
 
 fun RealmModel.insertOrUpdate() {
-    val realm = Realm.getDefaultInstance()
-    realm.executeTransaction { realm.insertOrUpdate(this) }
-    realm.close()
+    Realm.getDefaultInstance().use { realm ->
+        realm.executeTransaction { realm.insertOrUpdate(this@insertOrUpdate) }
+    }
 }
 
 fun <T : RealmModel> Collection<T>.insertOrUpdate() {
-    val realm = Realm.getDefaultInstance()
-    realm.executeTransaction { realm.insertOrUpdate(this) }
-    realm.close()
+    Realm.getDefaultInstance().use { realm ->
+        realm.executeTransaction { realm.insertOrUpdate(this@insertOrUpdate) }
+    }
 }
 
 fun <T : RealmObject> T.asObservable(): Observable<T> {

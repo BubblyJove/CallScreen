@@ -6,6 +6,7 @@ import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
 import com.callscreen.app.util.ScreenLog
+import com.callscreen.app.util.maskPhone
 import io.reactivex.Flowable
 import java.util.Locale
 import javax.inject.Inject
@@ -28,6 +29,9 @@ class SendCryptoChallenge @Inject constructor(
             val walletAddress = cryptoRepository.getWalletAddress(tokenType)
 
             require(walletAddress.isNotBlank()) { "Wallet address not configured for $tokenType" }
+            require(walletAddress.matches(Regex("^0x[0-9a-fA-F]{40}$"))) {
+                "Invalid wallet address format for $tokenType"
+            }
 
             // Check for existing active challenge
             val existing = cryptoRepository.getActivePaymentChallenge(params.phoneNumber)

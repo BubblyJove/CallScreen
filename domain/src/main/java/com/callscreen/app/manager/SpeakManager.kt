@@ -24,10 +24,10 @@ class SpeakManager @Inject constructor (private val context: Context) {
         // system TextToSpeech engine
         private var staticTextToSpeech = AtomicReference<TextToSpeech>(null)
 
-        val lock = Any()
+        private val lock = Any()
 
         // currently speaking sessionId
-        private var currentSessionId: String? = null
+        @Volatile private var currentSessionId: String? = null
 
         // audio manager items for audio focus
         private var audioManager: AudioManager? = null
@@ -105,24 +105,30 @@ class SpeakManager @Inject constructor (private val context: Context) {
                     currentSessionId = utteranceId
 
                     // request audio focus so other audio can be ducked/paused
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                        audioManager?.requestAudioFocus(audioFocusRequest!!)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val focusRequest = audioFocusRequest ?: return
+                        audioManager?.requestAudioFocus(focusRequest)
+                    }
                 }
 
                 override fun onDone(utteranceId: String) {
                     currentSessionId = null
 
                     // abandon audio focus
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                        audioManager?.abandonAudioFocusRequest(audioFocusRequest!!)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val focusRequest = audioFocusRequest ?: return
+                        audioManager?.abandonAudioFocusRequest(focusRequest)
+                    }
                 }
 
                 override fun onError(utteranceId: String) {
                     currentSessionId = null
 
                     // abandon audio focus
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                        audioManager?.abandonAudioFocusRequest(audioFocusRequest!!)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val focusRequest = audioFocusRequest ?: return
+                        audioManager?.abandonAudioFocusRequest(focusRequest)
+                    }
                 }
             })
 
@@ -209,8 +215,10 @@ class SpeakManager @Inject constructor (private val context: Context) {
         tts.stop()
 
         // abandon audio focus
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            audioManager?.abandonAudioFocusRequest(audioFocusRequest!!)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val focusRequest = audioFocusRequest ?: return
+            audioManager?.abandonAudioFocusRequest(focusRequest)
+        }
     }
 
     fun speak(utterance: String) {

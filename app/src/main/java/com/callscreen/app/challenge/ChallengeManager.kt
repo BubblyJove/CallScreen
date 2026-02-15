@@ -19,6 +19,7 @@ import com.callscreen.app.data.WhitelistedContact
 import com.callscreen.app.sms.SmsSentReceiver
 import com.callscreen.app.util.PhoneNumberUtil
 import com.callscreen.app.util.ScreenLog
+import com.callscreen.app.util.maskPhone
 import kotlin.random.Random
 
 class ChallengeManager(private val context: Context) {
@@ -139,7 +140,7 @@ class ChallengeManager(private val context: Context) {
                 PackageManager.PERMISSION_GRANTED
         ScreenLog.d(TAG, "SEND_SMS permission granted: $hasPerm")
         if (!hasPerm) {
-            ScreenLog.e(TAG, "SEND_SMS not granted — aborting send to $phoneNumber")
+            ScreenLog.e(TAG, "SEND_SMS not granted — aborting send to ${maskPhone(phoneNumber)}")
             return
         }
 
@@ -147,7 +148,7 @@ class ChallengeManager(private val context: Context) {
             // 2. Get SmsManager — try multiple strategies
             val smsManager = getSmsManager()
             if (smsManager == null) {
-                ScreenLog.e(TAG, "Could not obtain SmsManager — aborting send to $phoneNumber")
+                ScreenLog.e(TAG, "Could not obtain SmsManager — aborting send to ${maskPhone(phoneNumber)}")
                 return
             }
 
@@ -174,9 +175,9 @@ class ChallengeManager(private val context: Context) {
             ScreenLog.d(TAG, "sendTextMessage returned (async result via SmsSentReceiver)")
 
         } catch (e: SecurityException) {
-            ScreenLog.e(TAG, "SecurityException sending to $phoneNumber", e)
+            ScreenLog.e(TAG, "SecurityException sending to ${maskPhone(phoneNumber)}", e)
         } catch (e: Exception) {
-            ScreenLog.e(TAG, "Exception sending to $phoneNumber", e)
+            ScreenLog.e(TAG, "Exception sending to ${maskPhone(phoneNumber)}", e)
         }
     }
 
@@ -217,7 +218,7 @@ class ChallengeManager(private val context: Context) {
                     ScreenLog.d(TAG, "getSmsManagerForSubscriptionId($subId) returned non-null")
                     return mgr
                 } else {
-                    ScreenLog.w(TAG, "No active subscription found")
+                    ScreenLog.w(TAG, "No active SIM subscription found")
                 }
             }
         } catch (e: Exception) {

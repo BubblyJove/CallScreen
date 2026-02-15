@@ -45,9 +45,12 @@ fun nonDebugPackageName(packageName: String): String {
 }
 
 fun sha256(input: String): String {
-    val digest = sha256Digest.get()
-    digest!!.reset()
+    val digest = sha256Digest.get() ?: MessageDigest.getInstance("SHA-256")
+    digest.reset()
 
     val hashBytes = digest.digest(input.toByteArray(Charsets.UTF_8))
     return hashBytes.joinToString("") { String.format("%02x", it) }
 }
+
+fun maskPhone(phone: String): String =
+    if (phone.length > 4) "***${phone.takeLast(4)}" else "***"

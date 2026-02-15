@@ -12,7 +12,6 @@ import com.callscreen.app.model.CryptoPaymentChallenge
 import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.util.ScreenLog
 import dagger.android.AndroidInjection
-import timber.log.Timber
 import javax.inject.Inject
 
 class CryptoSettingsActivity : QkActivity() {
@@ -66,15 +65,25 @@ class CryptoSettingsActivity : QkActivity() {
                 val selectedToken = CryptoPaymentChallenge.TokenType.values()[tokenSpinner.selectedItemPosition]
                 cryptoRepository.setPreferredTokenType(selectedToken)
 
-                cryptoRepository.setWalletAddress(CryptoPaymentChallenge.TokenType.ETH, ethWalletInput.text.toString().trim())
-                cryptoRepository.setWalletAddress(CryptoPaymentChallenge.TokenType.USDC, usdcWalletInput.text.toString().trim())
-                cryptoRepository.setWalletAddress(CryptoPaymentChallenge.TokenType.USDT, usdtWalletInput.text.toString().trim())
+                val ethWallet = ethWalletInput.text.toString().trim()
+                val usdcWallet = usdcWalletInput.text.toString().trim()
+                val usdtWallet = usdtWalletInput.text.toString().trim()
+                val walletRegex = Regex("^0x[0-9a-fA-F]{40}$")
+                for ((label, addr) in listOf("ETH" to ethWallet, "USDC" to usdcWallet, "USDT" to usdtWallet)) {
+                    if (addr.isNotBlank() && !addr.matches(walletRegex)) {
+                        Toast.makeText(this, getString(R.string.screening_invalid_wallet_address), Toast.LENGTH_LONG).show()
+                        ScreenLog.w("CryptoSettings", "Invalid $label wallet address")
+                        return@setOnClickListener
+                    }
+                }
+                cryptoRepository.setWalletAddress(CryptoPaymentChallenge.TokenType.ETH, ethWallet)
+                cryptoRepository.setWalletAddress(CryptoPaymentChallenge.TokenType.USDC, usdcWallet)
+                cryptoRepository.setWalletAddress(CryptoPaymentChallenge.TokenType.USDT, usdtWallet)
                 cryptoRepository.setAlchemyApiKey(alchemyKeyInput.text.toString().trim())
 
                 Toast.makeText(this, R.string.crypto_settings_saved, Toast.LENGTH_SHORT).show()
                 ScreenLog.d("CryptoSettings", "Settings saved")
             } catch (e: Exception) {
-                Timber.e(e, "Failed to save crypto settings")
                 ScreenLog.e("CryptoSettings", "Failed to save", e)
                 Toast.makeText(this, R.string.crypto_settings_error, Toast.LENGTH_SHORT).show()
             }

@@ -53,4 +53,9 @@ dependencies {
 
     // Phone number formatting
     implementation("io.michaelrocks:libphonenumber-android:8.13.27")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    testImplementation("org.mockito:mockito-core:5.8.0")
 }

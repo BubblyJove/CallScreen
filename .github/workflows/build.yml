@@ -28,6 +28,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Run detekt
+        run: ./gradlew detekt --no-daemon
+
+      - name: Run Android lint
+        run: ./gradlew lintDebug --no-daemon
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon
 

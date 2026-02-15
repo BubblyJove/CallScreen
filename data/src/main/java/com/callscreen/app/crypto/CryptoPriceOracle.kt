@@ -7,6 +7,7 @@ import com.callscreen.app.util.ScreenLog
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,8 +41,8 @@ class CryptoPriceOracle @Inject constructor(
         @Json(name = "usd") val usd: Double?
     )
 
-    @Volatile private var cachedPrice: Double? = null
-    @Volatile private var cacheTimestamp: Long = 0
+    private data class CacheEntry(val price: Double, val timestamp: Long)
+    private val cache = AtomicReference<CacheEntry?>(null)
 
     /**
      * Fetch current ETH/USD price. Uses a 1-minute cache.
@@ -49,10 +50,9 @@ class CryptoPriceOracle @Inject constructor(
      */
     fun getEthPriceUsd(): Double? {
         val now = System.currentTimeMillis()
-        cachedPrice?.let { price ->
-            if (now - cacheTimestamp < CACHE_TTL_MS) {
-                return price
-            }
+        val cached = cache.get()
+        if (cached != null && now - cached.timestamp < CACHE_TTL_MS) {
+            return cached.price
         }
 
         ScreenLog.d(TAG, "Fetching ETH price from CoinGecko...")
@@ -61,29 +61,28 @@ class CryptoPriceOracle @Inject constructor(
                 .url(COINGECKO_URL)
                 .build()
 
-            val response = httpClient.newCall(request).execute()
-            if (!response.isSuccessful) {
-                ScreenLog.w(TAG, "CoinGecko API returned HTTP ${response.code}")
-                return cachedPrice
+            val body = httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    ScreenLog.w(TAG, "CoinGecko API returned HTTP ${response.code}")
+                    return cache.get()?.price
+                }
+                response.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return cache.get()?.price
             }
-
-            val body = response.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return cachedPrice
             val adapter = moshi.adapter(PriceResponse::class.java)
             val priceResponse = adapter.fromJson(body)
             val price = priceResponse?.ethereum?.usd
 
             if (price != null && price > 0) {
-                cachedPrice = price
-                cacheTimestamp = now
+                cache.set(CacheEntry(price, now))
                 ScreenLog.d(TAG, "ETH price: \$$price")
             } else {
                 ScreenLog.w(TAG, "CoinGecko returned null/zero price")
             }
 
-            price ?: cachedPrice
+            price ?: cache.get()?.price
         } catch (e: Exception) {
             ScreenLog.e(TAG, "Failed to fetch ETH price: ${e.message}", e)
-            cachedPrice
+            cache.get()?.price
         }
     }
 }

@@ -4,8 +4,9 @@ import android.content.Context
 import android.provider.ContactsContract
 import com.callscreen.app.model.WhitelistedContact
 import com.callscreen.app.repository.ScreeningRepository
+import com.callscreen.app.util.ScreenLog
+import com.callscreen.app.util.maskPhone
 import io.reactivex.Flowable
-import timber.log.Timber
 import javax.inject.Inject
 
 class CheckNumberTrusted @Inject constructor(
@@ -15,8 +16,8 @@ class CheckNumberTrusted @Inject constructor(
 
     data class Params(val phoneNumber: String)
 
-    // Perf: pre-allocate projection array to avoid allocation per query
     companion object {
+        private const val TAG = "CheckTrusted"
         private val NAME_PROJECTION = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
     }
 
@@ -62,7 +63,7 @@ class CheckNumberTrusted @Inject constructor(
                 } else null
             }
         } catch (e: Exception) {
-            Timber.w(e, "Failed to check device contacts for %s", phoneNumber)
+            ScreenLog.w(TAG, "Failed to check device contacts for ${maskPhone(phoneNumber)}")
             null
         }
     }

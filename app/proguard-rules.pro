@@ -12,9 +12,11 @@
     public static void v(...);
     public static void d(...);
 }
-# Perf: strip ScreenLog debug methods in release
+# Perf: strip ScreenLog methods in release builds
 -assumenosideeffects class com.callscreen.app.util.ScreenLog {
     public static void d(...);
+    public static void w(...);
+    public static void e(...);
 }
 
 # Room

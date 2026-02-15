@@ -25,6 +25,7 @@ import android.content.IntentFilter
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.AudioManager.GET_DEVICES_INPUTS
+import timber.log.Timber
 
 
 // this class is, by design, as simplistic it can be to support easy and fast connection
@@ -110,7 +111,7 @@ class BluetoothMicManager(
         try {    // see https://stackoverflow.com/a/26929741 for try-catch reason
             audioManager.startBluetoothSco()
         }
-        catch (e: Exception) { /* nothing */ }
+        catch (e: Exception) { Timber.w(e, "startBluetoothSco failed") }
 
         // if sco device is already on (maybe by another app?) callback now
         if (audioManager.isBluetoothScoOn)

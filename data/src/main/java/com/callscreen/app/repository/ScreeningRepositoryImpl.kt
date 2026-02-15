@@ -92,6 +92,7 @@ class ScreeningRepositoryImpl @Inject constructor(
             .findAllAsync()
             .asFlowable()
             .filter { it.isLoaded }
+            .doOnCancel { realm.close() }
     }
 
     override fun getChallengeForNumber(phoneNumber: String): ChallengeState? {

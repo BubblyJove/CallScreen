@@ -49,7 +49,10 @@ fun Uri.getResourceBytes(context: Context): ByteArray =
         context.contentResolver.openInputStream(this)?.use {
             it.readBytes()
         } ?: ByteArray(0)
-    } catch (e: Exception) { ByteArray(0) }
+    } catch (e: Exception) {
+        timber.log.Timber.w(e, "Failed to read URI bytes")
+        ByteArray(0)
+    }
 
 fun Uri.resourceExists(context: Context): Boolean {
     var retVal: Boolean? = null
@@ -62,7 +65,8 @@ fun Uri.resourceExists(context: Context): Boolean {
             }
             ContentResolver.SCHEME_FILE -> retVal = this.toFile().exists()
         }
-    } catch (e: Exception) { /* nothing */
+    } catch (e: Exception) {
+        timber.log.Timber.w(e, "Failed to check URI existence")
     }
 
     return retVal ?: false
@@ -93,7 +97,9 @@ fun Uri.getName(context: Context): String? {
             }
             ContentResolver.SCHEME_FILE -> retVal = this.toFile().name
         }
-    } catch (e: Exception) { /* nothing */ }
+    } catch (e: Exception) {
+        timber.log.Timber.w(e, "Failed to get URI name")
+    }
 
     return retVal
 }
@@ -113,7 +119,8 @@ fun Uri.getSize(context: Context): Long {
             }
             ContentResolver.SCHEME_FILE -> retVal = this.toFile().length()
         }
-    } catch (e: Exception) { /* nothing */
+    } catch (e: Exception) {
+        timber.log.Timber.w(e, "Failed to get URI size")
     }
 
     return retVal ?: -1

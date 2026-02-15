@@ -4,6 +4,7 @@ import com.callscreen.app.model.WhitelistedContact
 import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
 import com.callscreen.app.util.ScreenLog
+import com.callscreen.app.util.maskPhone
 import io.reactivex.Flowable
 import javax.inject.Inject
 
@@ -83,13 +84,13 @@ class ValidateChallengeResponse @Inject constructor(
                     )
                     ScreenLog.d(TAG, "Confirmation SMS sent to ${params.phoneNumber}")
                 } catch (e: Exception) {
-                    ScreenLog.e(TAG, "Failed to send confirmation SMS to ${params.phoneNumber}", e)
+                    ScreenLog.e(TAG, "Failed to send confirmation SMS to ${maskPhone(params.phoneNumber)}", e)
                 }
 
                 return@fromCallable Result.Success
             }
 
-            ScreenLog.d(TAG, "Wrong answer from ${params.phoneNumber}: got '$answer', expected '$expected'")
+            ScreenLog.d(TAG, "Wrong answer from ${params.phoneNumber}: got '$answer'")
             Result.WrongAnswer
         }
     }

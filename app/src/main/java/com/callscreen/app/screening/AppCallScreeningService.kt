@@ -7,11 +7,12 @@ import com.callscreen.app.interactor.SendMathChallenge
 import com.callscreen.app.model.PendingScreenedMessage
 import com.callscreen.app.repository.ScreeningRepository
 import com.callscreen.app.util.Preferences
+import com.callscreen.app.util.ScreenLog
+import com.callscreen.app.util.maskPhone
 import dagger.android.AndroidInjection
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.rxkotlin.plusAssign
 import io.reactivex.schedulers.Schedulers
-import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -40,18 +41,18 @@ class AppCallScreeningService : CallScreeningService() {
         val number = callDetails.handle?.schemeSpecificPart
 
         if (number.isNullOrBlank()) {
-            Timber.w("No caller number — letting call through")
+            ScreenLog.w(TAG, "No caller number — letting call through")
             respondToCall(callDetails, ALLOW_RESPONSE)
             return
         }
 
         if (!prefs.callScreeningEnabled.get()) {
-            Timber.d("Call screening disabled — allowing call from %s", number)
+            ScreenLog.d(TAG, "Call screening disabled — allowing call from $number")
             respondToCall(callDetails, ALLOW_RESPONSE)
             return
         }
 
-        Timber.d("Screening call from %s", number)
+        ScreenLog.d(TAG, "Screening call from $number")
 
         disposables += checkNumberTrusted.buildObservable(CheckNumberTrusted.Params(number))
             .subscribeOn(Schedulers.io())
@@ -59,10 +60,10 @@ class AppCallScreeningService : CallScreeningService() {
             .firstOrError()
             .subscribe({ trusted ->
                 if (trusted) {
-                    Timber.d("Trusted — allowing call from %s", number)
+                    ScreenLog.d(TAG, "Trusted — allowing call from $number")
                     respondToCall(callDetails, ALLOW_RESPONSE)
                 } else {
-                    Timber.d("Untrusted — rejecting call from %s", number)
+                    ScreenLog.d(TAG, "Untrusted — rejecting call from $number")
                     // Perf: respond immediately with pre-built response to minimize ring latency
                     respondToCall(callDetails, REJECT_RESPONSE)
 
@@ -76,12 +77,12 @@ class AppCallScreeningService : CallScreeningService() {
                     // Send math challenge if enabled
                     if (prefs.mathChallengeEnabled.get()) {
                         sendMathChallenge.execute(SendMathChallenge.Params(number)) {
-                            Timber.d("Challenge sent for %s", number)
+                            ScreenLog.d(TAG, "Challenge sent for $number")
                         }
                     }
                 }
             }, { error ->
-                Timber.e(error, "Error screening call from %s — fail-open", number)
+                ScreenLog.e(TAG, "Error screening call from ${maskPhone(number)} — fail-open", error)
                 respondToCall(callDetails, ALLOW_RESPONSE)
             })
     }
@@ -92,6 +93,7 @@ class AppCallScreeningService : CallScreeningService() {
     }
 
     companion object {
+        private const val TAG = "CallScreening"
         private const val TRUST_CHECK_TIMEOUT_MS = 5_000L
         private const val SCREENED_CALL_BODY = "[Screened call]"
 

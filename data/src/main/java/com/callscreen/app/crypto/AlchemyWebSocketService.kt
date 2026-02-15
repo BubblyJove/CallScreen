@@ -3,6 +3,7 @@ package com.callscreen.app.crypto
 import com.callscreen.app.model.CryptoPaymentChallenge
 import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.util.ScreenLog
+import com.callscreen.app.util.maskPhone
 import io.reactivex.BackpressureStrategy
 import io.reactivex.Flowable
 import io.reactivex.disposables.Disposable
@@ -20,6 +21,7 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,6 +37,7 @@ class AlchemyWebSocketService @Inject constructor(
         private const val CONFIRMATION_POLL_INTERVAL = 15L // seconds
         private const val TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
         private const val MAX_RESPONSE_SIZE = 64 * 1024 // 64KB cap for JSON-RPC responses
+        private const val MAX_POLL_COUNT = 480L // 480 * 15s = 2 hours max polling
         private const val JSON_MEDIA_TYPE = "application/json"
     }
 
@@ -50,15 +53,21 @@ class AlchemyWebSocketService @Inject constructor(
         val challenge: CryptoPaymentChallenge,
         val webSocket: WebSocket?,
         val confirmationPoller: Disposable? = null,
-        var subscriptionId: String? = null
+        val subscriptionId: AtomicReference<String?> = AtomicReference(null)
     )
 
     override fun monitorPayment(challenge: CryptoPaymentChallenge): Flowable<Web3Service.PaymentEvent> {
         return Flowable.create({ emitter ->
             val apiKey = cryptoRepository.getAlchemyApiKey()
             if (apiKey.isBlank()) {
-                ScreenLog.e(TAG, "FAILED: Alchemy API key is blank/not configured — cannot monitor payment for ${challenge.phoneNumber}")
+                ScreenLog.e(TAG, "FAILED: Alchemy API key is blank/not configured — cannot monitor payment for ${maskPhone(challenge.phoneNumber)}")
                 emitter.onError(IllegalStateException("Alchemy API key not configured"))
+                return@create
+            }
+
+            if (!challenge.walletAddress.matches(Regex("^0x[0-9a-fA-F]{40}$"))) {
+                ScreenLog.e(TAG, "Invalid wallet address format for challenge ${challenge.id}")
+                emitter.onError(IllegalArgumentException("Invalid wallet address format"))
                 return@create
             }
 
@@ -125,7 +134,7 @@ class AlchemyWebSocketService @Inject constructor(
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    ScreenLog.e(TAG, "WebSocket FAILURE for ${challenge.phoneNumber}: ${t.message}", t)
+                    ScreenLog.e(TAG, "WebSocket FAILURE for ${maskPhone(challenge.phoneNumber)}: ${t.message}", t)
                     // If we're already polling confirmations via HTTP, the WebSocket is
                     // no longer needed — don't kill the poller by emitting an error
                     val state = activeMonitors[challenge.id]
@@ -331,9 +340,7 @@ class AlchemyWebSocketService @Inject constructor(
         // Handle subscription confirmation
         if (json.has("result") && json.optInt("id") == 1) {
             val subscriptionId = json.getString("result")
-            activeMonitors[challenge.id]?.let {
-                activeMonitors[challenge.id] = it.copy(subscriptionId = subscriptionId)
-            }
+            activeMonitors[challenge.id]?.subscriptionId?.set(subscriptionId)
             ScreenLog.d(TAG, "Subscription confirmed for ${challenge.phoneNumber}: subId=$subscriptionId")
             return
         }
@@ -348,7 +355,7 @@ class AlchemyWebSocketService @Inject constructor(
             return
         }
         val result = params.optJSONObject("result") ?: run {
-            ScreenLog.w(TAG, "WebSocket event with no result for ${challenge.phoneNumber}")
+            ScreenLog.w(TAG, "WebSocket event with no result for ${maskPhone(challenge.phoneNumber)}")
             return
         }
 
@@ -438,7 +445,8 @@ class AlchemyWebSocketService @Inject constructor(
         ScreenLog.d(TAG, "Starting confirmation polling for $txHash (every ${CONFIRMATION_POLL_INTERVAL}s)")
 
         val poller = Flowable.interval(CONFIRMATION_POLL_INTERVAL, TimeUnit.SECONDS, Schedulers.io())
-            .subscribe { tick ->
+            .take(MAX_POLL_COUNT)
+            .subscribe({ tick ->
                 try {
                     val confirmations = getConfirmationCount(txHash)
                     ScreenLog.d(TAG, "Poll #$tick for $txHash: $confirmations/${CryptoPaymentChallenge.REQUIRED_CONFIRMATIONS} confirmations")
@@ -468,7 +476,16 @@ class AlchemyWebSocketService @Inject constructor(
                 } catch (e: Exception) {
                     ScreenLog.w(TAG, "Error polling confirmations for $txHash: ${e.message}")
                 }
-            }
+            }, { error ->
+                ScreenLog.e(TAG, "Confirmation polling error for $txHash", error)
+            }, {
+                // .take(MAX_POLL_COUNT) completed without confirmation
+                ScreenLog.e(TAG, "Confirmation polling exhausted ($MAX_POLL_COUNT polls) for challenge $challengeId")
+                if (!emitter.isCancelled) {
+                    emitter.onError(IllegalStateException("Payment confirmation timed out after ${MAX_POLL_COUNT * CONFIRMATION_POLL_INTERVAL}s"))
+                }
+                stopMonitoring(challengeId)
+            })
 
         activeMonitors[challengeId]?.let {
             activeMonitors[challengeId] = it.copy(confirmationPoller = poller)

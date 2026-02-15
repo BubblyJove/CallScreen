@@ -40,6 +40,7 @@ import com.callscreen.app.repository.CryptoRepository
 import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
 import com.callscreen.app.util.ScreenLog
+import com.callscreen.app.util.maskPhone
 import com.callscreen.app.worker.ReceiveSmsWorker
 import com.callscreen.app.worker.ReceiveSmsWorker.Companion.INPUT_DATA_KEY_MESSAGE_ID
 import io.reactivex.Single
@@ -159,19 +160,19 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                                 sendMathChallenge.buildObservable(SendMathChallenge.Params(address)).blockingFirst()
                             }
                         } catch (e: Exception) {
-                            ScreenLog.e(TAG, "Failed to send challenge to $address, trying math fallback", e)
+                            ScreenLog.e(TAG, "Failed to send challenge to ${maskPhone(address)}, trying math fallback", e)
                             try {
                                 sendMathChallenge.buildObservable(SendMathChallenge.Params(address)).blockingFirst()
                                 ScreenLog.d(TAG, "Math fallback challenge sent to $address")
                             } catch (e2: Exception) {
-                                ScreenLog.e(TAG, "Math fallback also failed for $address", e2)
+                                ScreenLog.e(TAG, "Math fallback also failed for ${maskPhone(address)}", e2)
                             }
                         }
 
                         0L
                     } catch (e: Exception) {
                         // Fail-open: on any screening error, insert to Quik normally
-                        ScreenLog.e(TAG, "Screening error for $address — fail-open", e)
+                        ScreenLog.e(TAG, "Screening error for ${maskPhone(address)} — fail-open", e)
                         insertAndEnqueue(context, subId, address, body, timestamp)
                     }
                 }
@@ -208,7 +209,7 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                         event.challengeId, event.confirmations, event.txHash
                     )
                 }, { error ->
-                    ScreenLog.e(TAG, "Payment monitor error for ${challenge.phoneNumber}", error)
+                    ScreenLog.e(TAG, "Payment monitor error for ${maskPhone(challenge.phoneNumber)}", error)
                 })
         } catch (e: Exception) {
             ScreenLog.e(TAG, "Failed to start payment monitor", e)

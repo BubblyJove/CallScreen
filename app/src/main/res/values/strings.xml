@@ -646,6 +646,7 @@
     <string name="crypto_usdt_wallet_label">USDT wallet address</string>
     <string name="crypto_alchemy_label">Alchemy API key</string>
     <string name="crypto_alchemy_hint">Enter your Alchemy API key</string>
+    <string name="screening_invalid_wallet_address">Invalid wallet address. Must be a 0x-prefixed 40-character hex address.</string>
     <string name="crypto_save">Save Settings</string>
     <string name="crypto_settings_saved">Crypto settings saved</string>
     <string name="crypto_settings_error">Failed to save settings</string>

@@ -48,12 +48,6 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-        // Perf: skip runtime null checks on non-null parameters for smaller/faster code
-        freeCompilerArgs += listOf(
-            "-Xno-param-assertions",
-            "-Xno-call-assertions",
-            "-Xno-receiver-assertions"
-        )
     }
 
     buildFeatures {

@@ -4,8 +4,8 @@ import com.callscreen.app.model.Attachment
 import com.callscreen.app.model.ChallengeState
 import com.callscreen.app.repository.MessageRepository
 import com.callscreen.app.repository.ScreeningRepository
+import com.callscreen.app.util.ScreenLog
 import io.reactivex.Flowable
-import timber.log.Timber
 import javax.inject.Inject
 import kotlin.random.Random
 
@@ -20,8 +20,8 @@ class SendMathChallenge @Inject constructor(
     // and we always send to exactly one recipient
     private fun singletonList(value: String): List<String> = listOf(value)
 
-    // Perf: cache empty list — avoid allocating a new emptyList() per invocation
     companion object {
+        private const val TAG = "MathChallenge"
         private val EMPTY_ATTACHMENTS = emptyList<Attachment>()
     }
 
@@ -30,7 +30,7 @@ class SendMathChallenge @Inject constructor(
             // Reuse existing challenge if not expired
             val existing = screeningRepository.getChallengeForNumber(params.phoneNumber)
             if (existing != null && !existing.isExpired() && existing.hasAttemptsRemaining()) {
-                Timber.d("Reusing existing challenge for %s", params.phoneNumber)
+                ScreenLog.d(TAG, "Reusing existing challenge for ${params.phoneNumber}")
                 sendChallengeMessage(params.phoneNumber, existing.challengeQuestion)
                 return@fromCallable existing
             }
@@ -63,7 +63,7 @@ class SendMathChallenge @Inject constructor(
             screeningRepository.saveChallengeState(challenge)
             sendChallengeMessage(params.phoneNumber, question)
 
-            Timber.d("Sent math challenge to %s: %s", params.phoneNumber, question)
+            ScreenLog.d(TAG, "Sent math challenge to ${params.phoneNumber}: $question")
             challenge
         }
     }

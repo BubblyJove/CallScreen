@@ -140,40 +140,36 @@ class ConversationRepositoryImpl @Inject constructor(
         }.subscribeOn(Schedulers.io()) // Ensure the operation is performed on a background thread
 
     override fun searchConversations(query: CharSequence): List<SearchResult> {
-        val realm = Realm.getDefaultInstance()
+        return Realm.getDefaultInstance().use { realm ->
+            val searchQuery = query.toString()
+            val conversations = realm.copyFromRealm(realm
+                .where(Conversation::class.java)
+                .notEqualTo("id", 0L)
+                .isNotNull("lastMessage")
+                .equalTo("blocked", false)
+                .isNotEmpty("recipients")
+                .sort("pinned", Sort.DESCENDING, "lastMessage.date", Sort.DESCENDING)
+                .findAll())
 
-        val searchQuery = query.toString()
-        val conversations = realm.copyFromRealm(realm
-            .where(Conversation::class.java)
-            .notEqualTo("id", 0L)
-            .isNotNull("lastMessage")
-            .equalTo("blocked", false)
-            .isNotEmpty("recipients")
-            .sort("pinned", Sort.DESCENDING, "lastMessage.date", Sort.DESCENDING)
-            .findAll())
+            val messagesByConversation = realm.copyFromRealm(realm
+                .where(Message::class.java)
+                .beginGroup()
+                .contains("body", searchQuery, Case.INSENSITIVE)
+                .or()
+                .contains("parts.text", searchQuery, Case.INSENSITIVE)
+                .endGroup()
+                .findAll())
+                .groupBy { message -> message.threadId }
+                .filter { (threadId, _) -> conversations.firstOrNull { it.id == threadId } != null }
+                .map { (threadId, messages) -> Pair(conversations.first { it.id == threadId }, messages.size) }
+                .map { (conversation, messages) -> SearchResult(searchQuery, conversation, messages) }
+                .sortedByDescending { result -> result.messages }
+                .toList()
 
-        val messagesByConversation = realm.copyFromRealm(realm
-            .where(Message::class.java)
-            .beginGroup()
-            .contains("body", searchQuery, Case.INSENSITIVE)
-            .or()
-            .contains("parts.text", searchQuery, Case.INSENSITIVE)
-            .endGroup()
-            .findAll())
-            .groupBy { message -> message.threadId }
-            .filter { (threadId, _) -> conversations.firstOrNull { it.id == threadId } != null }
-            .map { (threadId, messages) -> Pair(conversations.first { it.id == threadId }, messages.size) }
-            .map { (conversation, messages) -> SearchResult(searchQuery, conversation, messages) }
-            .sortedByDescending { result -> result.messages }
-            .toList()
-
-        realm.close()
-
-        return conversations
-            .filter { conversation -> conversationFilter.filter(conversation, searchQuery) }
-            .map {
-                    conversation -> SearchResult(searchQuery, conversation, 0)
-            } + messagesByConversation
+            conversations
+                .filter { conversation -> conversationFilter.filter(conversation, searchQuery) }
+                .map { conversation -> SearchResult(searchQuery, conversation, 0) } + messagesByConversation
+        }
     }
 
     override fun getBlockedConversations(): RealmResults<Conversation> =

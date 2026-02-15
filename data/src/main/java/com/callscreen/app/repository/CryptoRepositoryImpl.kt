@@ -1,6 +1,9 @@
 package com.callscreen.app.repository
 
+import android.content.Context
 import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
 import com.callscreen.app.model.CryptoPaymentChallenge
 import com.callscreen.app.util.ScreenLog
 import io.realm.Realm
@@ -8,6 +11,7 @@ import java.util.UUID
 import javax.inject.Inject
 
 class CryptoRepositoryImpl @Inject constructor(
+    private val context: Context,
     private val sharedPrefs: SharedPreferences
 ) : CryptoRepository {
 
@@ -19,6 +23,41 @@ class CryptoRepositoryImpl @Inject constructor(
         private const val PREF_ALCHEMY_KEY = "alchemy_api_key"
         private const val PREF_WALLET_PREFIX = "crypto_wallet_"
         private const val DEFAULT_PRICE_CENTS = 20 // $0.20
+        private const val ENCRYPTED_PREFS_FILE = "crypto_prefs"
+    }
+
+    private val encryptedPrefs: SharedPreferences by lazy {
+        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+        EncryptedSharedPreferences.create(
+            ENCRYPTED_PREFS_FILE,
+            masterKeyAlias,
+            context,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        ).also { encrypted ->
+            migrateToEncryptedPrefs(encrypted)
+        }
+    }
+
+    private fun migrateToEncryptedPrefs(encrypted: SharedPreferences) {
+        val oldKey = sharedPrefs.getString(PREF_ALCHEMY_KEY, null)
+        if (oldKey != null) {
+            val editor = encrypted.edit()
+            editor.putString(PREF_ALCHEMY_KEY, oldKey)
+            for (tokenType in CryptoPaymentChallenge.TokenType.values()) {
+                val walletKey = "${PREF_WALLET_PREFIX}${tokenType.name}"
+                sharedPrefs.getString(walletKey, null)?.let { editor.putString(walletKey, it) }
+            }
+            editor.apply()
+
+            val clearEditor = sharedPrefs.edit()
+            clearEditor.remove(PREF_ALCHEMY_KEY)
+            for (tokenType in CryptoPaymentChallenge.TokenType.values()) {
+                clearEditor.remove("${PREF_WALLET_PREFIX}${tokenType.name}")
+            }
+            clearEditor.apply()
+            ScreenLog.d(TAG, "Migrated sensitive keys to encrypted storage")
+        }
     }
 
     override fun createPaymentChallenge(
@@ -98,21 +137,21 @@ class CryptoRepositoryImpl @Inject constructor(
     }
 
     override fun getWalletAddress(tokenType: CryptoPaymentChallenge.TokenType): String {
-        return sharedPrefs.getString("${PREF_WALLET_PREFIX}${tokenType.name}", "") ?: ""
+        return encryptedPrefs.getString("${PREF_WALLET_PREFIX}${tokenType.name}", "") ?: ""
     }
 
     override fun setWalletAddress(tokenType: CryptoPaymentChallenge.TokenType, address: String) {
-        sharedPrefs.edit().putString("${PREF_WALLET_PREFIX}${tokenType.name}", address).apply()
+        encryptedPrefs.edit().putString("${PREF_WALLET_PREFIX}${tokenType.name}", address).apply()
     }
 
     override fun getAlchemyApiKey(): String {
-        val key = sharedPrefs.getString(PREF_ALCHEMY_KEY, "") ?: ""
-        ScreenLog.d(TAG, "getAlchemyApiKey: ${if (key.isBlank()) "BLANK (not configured!)" else "present (${key.length} chars, starts=${key.take(8)}...)"}")
+        val key = encryptedPrefs.getString(PREF_ALCHEMY_KEY, "") ?: ""
+        ScreenLog.d(TAG, "getAlchemyApiKey: ${if (key.isBlank()) "BLANK (not configured!)" else "present (${key.length} chars)"}")
         return key
     }
 
     override fun setAlchemyApiKey(key: String) {
-        sharedPrefs.edit().putString(PREF_ALCHEMY_KEY, key).apply()
+        encryptedPrefs.edit().putString(PREF_ALCHEMY_KEY, key).apply()
     }
 
     override fun getChallengePrice(): Int {

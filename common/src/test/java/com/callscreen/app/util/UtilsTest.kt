@@ -12,7 +12,7 @@ class UtilsTest {
 
     @Test
     fun `maskPhone masks standard 10-digit number`() {
-        assertEquals("***4567", maskPhone("1234567890".takeLast(8)))
+        assertEquals("***7890", maskPhone("1234567890"))
     }
 
     @Test

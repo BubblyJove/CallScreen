@@ -86,7 +86,7 @@ class ValidateChallengeResponseTest {
         }
         whenever(screeningRepository.getChallengeForNumber(any())).thenReturn(challenge)
         whenever(screeningRepository.getPendingMessagesForNumberSync(any())).thenReturn(emptyList())
-        whenever(messageRepository.sendNewMessages(any(), any(), any(), any(), any())).thenReturn(mock())
+        whenever(messageRepository.sendNewMessages(any(), any(), any(), any(), any(), any())).thenReturn(mock())
 
         val result = validator.buildObservable(
             ValidateChallengeResponse.Params("+1234567890", "42")

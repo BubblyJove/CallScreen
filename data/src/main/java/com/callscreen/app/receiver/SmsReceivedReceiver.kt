@@ -202,19 +202,11 @@ class SmsReceivedReceiver : BroadcastReceiver() {
             web3Service.monitorPayment(challenge)
                 .subscribeOn(Schedulers.io())
                 .subscribe({ event ->
-                    when (event.status) {
-                        CryptoPaymentChallenge.PaymentStatus.CONFIRMING -> {
-                            ScreenLog.d(TAG, "Payment detected for ${challenge.phoneNumber}: tx=${event.txHash}")
-                            monitorCryptoPayment.onPaymentDetected(event.challengeId, event.txHash)
-                        }
-                        CryptoPaymentChallenge.PaymentStatus.CONFIRMED -> {
-                            ScreenLog.d(TAG, "Payment CONFIRMED for ${challenge.phoneNumber} (${event.confirmations} blocks)")
-                            monitorCryptoPayment.onConfirmationUpdate(event.challengeId, event.confirmations, event.txHash)
-                        }
-                        else -> {
-                            monitorCryptoPayment.onConfirmationUpdate(event.challengeId, event.confirmations, event.txHash)
-                        }
-                    }
+                    ScreenLog.d(TAG, "Payment event for ${challenge.phoneNumber}: " +
+                        "status=${event.status} confirmations=${event.confirmations} tx=${event.txHash}")
+                    monitorCryptoPayment.onConfirmationUpdate(
+                        event.challengeId, event.confirmations, event.txHash
+                    )
                 }, { error ->
                     ScreenLog.e(TAG, "Payment monitor error for ${challenge.phoneNumber}", error)
                 })

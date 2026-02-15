@@ -126,14 +126,22 @@ class AlchemyWebSocketService @Inject constructor(
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                     ScreenLog.e(TAG, "WebSocket FAILURE for ${challenge.phoneNumber}: ${t.message}", t)
-                    if (!emitter.isCancelled) {
+                    // If we're already polling confirmations via HTTP, the WebSocket is
+                    // no longer needed — don't kill the poller by emitting an error
+                    val state = activeMonitors[challenge.id]
+                    if (state?.confirmationPoller != null) {
+                        ScreenLog.d(TAG, "WebSocket failed but HTTP confirmation polling continues for ${challenge.phoneNumber}")
+                    } else if (!emitter.isCancelled) {
                         emitter.onError(t)
                     }
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                     ScreenLog.d(TAG, "WebSocket CLOSED for ${challenge.phoneNumber}: code=$code reason=$reason")
-                    if (!emitter.isCancelled) {
+                    val state = activeMonitors[challenge.id]
+                    if (state?.confirmationPoller != null) {
+                        ScreenLog.d(TAG, "WebSocket closed but HTTP confirmation polling continues for ${challenge.phoneNumber}")
+                    } else if (!emitter.isCancelled) {
                         emitter.onComplete()
                     }
                 }

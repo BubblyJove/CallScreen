@@ -2,6 +2,7 @@ package com.callscreen.app.repository
 
 import android.content.SharedPreferences
 import com.callscreen.app.model.CryptoPaymentChallenge
+import com.callscreen.app.util.ScreenLog
 import io.realm.Realm
 import java.util.UUID
 import javax.inject.Inject
@@ -11,6 +12,7 @@ class CryptoRepositoryImpl @Inject constructor(
 ) : CryptoRepository {
 
     companion object {
+        private const val TAG = "CryptoRepo"
         private const val PREF_CRYPTO_ENABLED = "crypto_challenge_enabled"
         private const val PREF_CHALLENGE_PRICE = "crypto_challenge_price_cents"
         private const val PREF_TOKEN_TYPE = "crypto_preferred_token"
@@ -38,12 +40,16 @@ class CryptoRepositoryImpl @Inject constructor(
             this.status = CryptoPaymentChallenge.PaymentStatus.PENDING
         }
 
+        ScreenLog.d(TAG, "createPaymentChallenge: phone=$phoneNumber amount=$exactAmount " +
+            "$tokenType wallet=$walletAddress id=${challenge.id}")
+
         Realm.getDefaultInstance().use { realm ->
             realm.executeTransaction { r ->
                 r.insertOrUpdate(challenge)
             }
         }
 
+        ScreenLog.d(TAG, "createPaymentChallenge: SAVED to Realm, id=${challenge.id}")
         return challenge
     }
 
@@ -76,6 +82,7 @@ class CryptoRepositoryImpl @Inject constructor(
         confirmations: Int,
         txHash: String
     ) {
+        ScreenLog.d(TAG, "updateChallengeStatus: id=$id status=$status confirmations=$confirmations txHash=${txHash.take(20)}")
         Realm.getDefaultInstance().use { realm ->
             realm.executeTransaction {
                 realm.where(CryptoPaymentChallenge::class.java)
@@ -85,7 +92,7 @@ class CryptoRepositoryImpl @Inject constructor(
                         this.status = status
                         this.confirmations = confirmations
                         if (txHash.isNotEmpty()) this.txHash = txHash
-                    }
+                    } ?: ScreenLog.w(TAG, "updateChallengeStatus: challenge $id NOT FOUND in Realm")
             }
         }
     }
@@ -99,7 +106,9 @@ class CryptoRepositoryImpl @Inject constructor(
     }
 
     override fun getAlchemyApiKey(): String {
-        return sharedPrefs.getString(PREF_ALCHEMY_KEY, "") ?: ""
+        val key = sharedPrefs.getString(PREF_ALCHEMY_KEY, "") ?: ""
+        ScreenLog.d(TAG, "getAlchemyApiKey: ${if (key.isBlank()) "BLANK (not configured!)" else "present (${key.length} chars, starts=${key.take(8)}...)"}")
+        return key
     }
 
     override fun setAlchemyApiKey(key: String) {
@@ -144,7 +153,13 @@ class CryptoRepositoryImpl @Inject constructor(
                 ))
                 .greaterThan("expiresAt", System.currentTimeMillis())
                 .findAll()
-            realm.copyFromRealm(results)
+            val copied = realm.copyFromRealm(results)
+            ScreenLog.d(TAG, "getActivePendingChallenges: found ${copied.size} active challenges")
+            copied.forEach { c ->
+                ScreenLog.d(TAG, "  challenge: phone=${c.phoneNumber} amount=${c.exactAmount} " +
+                    "${c.tokenType.name} status=${c.status.name} id=${c.id}")
+            }
+            copied
         }
     }
 }

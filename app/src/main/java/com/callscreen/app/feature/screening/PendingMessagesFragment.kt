@@ -51,17 +51,28 @@ class PendingMessagesFragment : Fragment() {
         recyclerView.adapter = adapter
 
         pendingMessages = screeningRepository.getPendingMessages()
+        ScreenLog.d(TAG, "Realm query created, adding change listener")
         pendingMessages?.addChangeListener { results ->
-            ScreenLog.d(TAG, "Change listener: ${results.size} results, loaded=${results.isLoaded}")
+            ScreenLog.d(TAG, "Change listener: ${results.size} results, loaded=${results.isLoaded}, valid=${results.isValid}")
             if (results.isLoaded && results.isNotEmpty()) {
-                val copied = results.realm.copyFromRealm(results)
-                adapter?.updateData(copied)
-                recyclerView.visibility = View.VISIBLE
-                emptyView.visibility = View.GONE
+                try {
+                    val copied = results.realm.copyFromRealm(results)
+                    ScreenLog.d(TAG, "Copied ${copied.size} items from Realm")
+                    copied.forEachIndexed { i, msg ->
+                        ScreenLog.d(TAG, "  [$i] phone=${msg.phoneNumber} body='${msg.body.take(30)}' status=${msg.status}")
+                    }
+                    adapter?.updateData(copied)
+                    recyclerView.visibility = View.VISIBLE
+                    emptyView.visibility = View.GONE
+                    ScreenLog.d(TAG, "RecyclerView VISIBLE, adapter count=${adapter?.itemCount}")
+                } catch (e: Exception) {
+                    ScreenLog.e(TAG, "copyFromRealm FAILED: ${e.message}", e)
+                }
             } else {
                 adapter?.updateData(emptyList())
                 recyclerView.visibility = View.GONE
                 emptyView.visibility = View.VISIBLE
+                ScreenLog.d(TAG, "Empty state shown")
             }
         }
 

@@ -53,17 +53,28 @@ class ActiveChallengesFragment : Fragment() {
         recyclerView.adapter = adapter
 
         challenges = screeningRepository.getActiveChallenges()
+        ScreenLog.d(TAG, "Realm query created, adding change listener")
         challenges?.addChangeListener { results ->
-            ScreenLog.d(TAG, "Change listener: ${results.size} results, loaded=${results.isLoaded}")
+            ScreenLog.d(TAG, "Change listener: ${results.size} results, loaded=${results.isLoaded}, valid=${results.isValid}")
             if (results.isLoaded && results.isNotEmpty()) {
-                val copied = results.realm.copyFromRealm(results)
-                adapter?.updateData(copied)
-                recyclerView.visibility = View.VISIBLE
-                emptyView.visibility = View.GONE
+                try {
+                    val copied = results.realm.copyFromRealm(results)
+                    ScreenLog.d(TAG, "Copied ${copied.size} items from Realm")
+                    copied.forEachIndexed { i, c ->
+                        ScreenLog.d(TAG, "  [$i] phone=${c.phoneNumber} type=${c.type} question='${c.challengeQuestion.take(40)}'")
+                    }
+                    adapter?.updateData(copied)
+                    recyclerView.visibility = View.VISIBLE
+                    emptyView.visibility = View.GONE
+                    ScreenLog.d(TAG, "RecyclerView VISIBLE, adapter count=${adapter?.itemCount}")
+                } catch (e: Exception) {
+                    ScreenLog.e(TAG, "copyFromRealm FAILED: ${e.message}", e)
+                }
             } else {
                 adapter?.updateData(emptyList())
                 recyclerView.visibility = View.GONE
                 emptyView.visibility = View.VISIBLE
+                ScreenLog.d(TAG, "Empty state shown")
             }
         }
 

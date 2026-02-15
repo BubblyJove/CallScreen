@@ -3,9 +3,9 @@ package com.callscreen.app.crypto
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
+import com.callscreen.app.util.ScreenLog
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,6 +17,7 @@ class CryptoPriceOracle @Inject constructor(
 ) {
 
     companion object {
+        private const val TAG = "PriceOracle"
         private const val COINGECKO_URL =
             "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
         private const val CACHE_TTL_MS = 60_000L // 1 minute
@@ -54,6 +55,7 @@ class CryptoPriceOracle @Inject constructor(
             }
         }
 
+        ScreenLog.d(TAG, "Fetching ETH price from CoinGecko...")
         return try {
             val request = Request.Builder()
                 .url(COINGECKO_URL)
@@ -61,8 +63,8 @@ class CryptoPriceOracle @Inject constructor(
 
             val response = httpClient.newCall(request).execute()
             if (!response.isSuccessful) {
-                Timber.w("CoinGecko API returned ${response.code}")
-                return cachedPrice // Return stale cache on failure
+                ScreenLog.w(TAG, "CoinGecko API returned HTTP ${response.code}")
+                return cachedPrice
             }
 
             val body = response.body?.string()?.take(MAX_RESPONSE_SIZE) ?: return cachedPrice
@@ -73,13 +75,15 @@ class CryptoPriceOracle @Inject constructor(
             if (price != null && price > 0) {
                 cachedPrice = price
                 cacheTimestamp = now
-                Timber.d("ETH price updated: $$price")
+                ScreenLog.d(TAG, "ETH price: \$$price")
+            } else {
+                ScreenLog.w(TAG, "CoinGecko returned null/zero price")
             }
 
             price ?: cachedPrice
         } catch (e: Exception) {
-            Timber.w(e, "Failed to fetch ETH price")
-            cachedPrice // Return stale cache on error
+            ScreenLog.e(TAG, "Failed to fetch ETH price: ${e.message}", e)
+            cachedPrice
         }
     }
 }

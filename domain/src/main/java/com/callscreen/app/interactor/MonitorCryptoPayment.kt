@@ -97,6 +97,20 @@ class MonitorCryptoPayment @Inject constructor(
                 // Clean up challenge state
                 screeningRepository.deleteChallengeState(challenge.phoneNumber)
 
+                // Send confirmation SMS
+                try {
+                    messageRepository.sendNewMessages(
+                        subId = -1,
+                        toAddresses = listOf(challenge.phoneNumber),
+                        body = "Your payment has been confirmed and your identity verified. Your messages will now be delivered normally.",
+                        attachments = emptyList(),
+                        sendAsGroup = false
+                    )
+                    ScreenLog.d(TAG, "Confirmation SMS sent to ${challenge.phoneNumber}")
+                } catch (e: Exception) {
+                    ScreenLog.e(TAG, "Failed to send confirmation SMS to ${challenge.phoneNumber}", e)
+                }
+
                 ScreenLog.d(TAG, "Contact whitelisted via crypto payment: ${challenge.phoneNumber}")
             }
         } else {

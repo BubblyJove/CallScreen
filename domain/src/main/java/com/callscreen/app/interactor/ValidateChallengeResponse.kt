@@ -72,6 +72,20 @@ class ValidateChallengeResponse @Inject constructor(
                 // Clean up challenge
                 screeningRepository.deleteChallengeState(params.phoneNumber)
 
+                // Send confirmation SMS
+                try {
+                    messageRepository.sendNewMessages(
+                        subId = -1,
+                        toAddresses = listOf(params.phoneNumber),
+                        body = "Your identity has been verified. Your messages will now be delivered normally.",
+                        attachments = emptyList(),
+                        sendAsGroup = false
+                    )
+                    ScreenLog.d(TAG, "Confirmation SMS sent to ${params.phoneNumber}")
+                } catch (e: Exception) {
+                    ScreenLog.e(TAG, "Failed to send confirmation SMS to ${params.phoneNumber}", e)
+                }
+
                 return@fromCallable Result.Success
             }
 

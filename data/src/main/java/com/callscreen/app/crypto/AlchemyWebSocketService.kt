@@ -94,8 +94,10 @@ class AlchemyWebSocketService @Inject constructor(
                         emitter.onComplete()
                         return@create
                     } else {
-                        // Start polling confirmations for the existing TX
+                        // Start polling confirmations for the existing TX — skip WebSocket
                         startConfirmationPolling(challenge.id, existingTx.first, emitter)
+                        ScreenLog.d(TAG, "Polling existing CONFIRMING TX, skipping WebSocket setup")
+                        return@create
                     }
                 } else {
                     ScreenLog.d(TAG, "No existing matching TX found for ${challenge.phoneNumber}, setting up WebSocket")

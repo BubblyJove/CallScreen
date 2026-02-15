@@ -159,7 +159,13 @@ class SmsReceivedReceiver : BroadcastReceiver() {
                                 sendMathChallenge.buildObservable(SendMathChallenge.Params(address)).blockingFirst()
                             }
                         } catch (e: Exception) {
-                            ScreenLog.e(TAG, "Failed to send challenge to $address", e)
+                            ScreenLog.e(TAG, "Failed to send challenge to $address, trying math fallback", e)
+                            try {
+                                sendMathChallenge.buildObservable(SendMathChallenge.Params(address)).blockingFirst()
+                                ScreenLog.d(TAG, "Math fallback challenge sent to $address")
+                            } catch (e2: Exception) {
+                                ScreenLog.e(TAG, "Math fallback also failed for $address", e2)
+                            }
                         }
 
                         0L

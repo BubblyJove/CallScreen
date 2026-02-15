@@ -116,8 +116,8 @@ class SendCryptoChallenge @Inject constructor(
                 }
                 CryptoPaymentChallenge.TokenType.USDC,
                 CryptoPaymentChallenge.TokenType.USDT -> {
-                    // Format with 4 decimal places, append nonce
-                    val baseStr = String.format(Locale.US, "%.4f", usdAmount)
+                    // USDC/USDT support 6 on-chain decimals: 2 base + 4 nonce = 6 total
+                    val baseStr = String.format(Locale.US, "%.2f", usdAmount)
                     "${baseStr}${nonce}"
                 }
             }

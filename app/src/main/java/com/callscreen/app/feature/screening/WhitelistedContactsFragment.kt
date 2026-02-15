@@ -10,16 +10,15 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.callscreen.app.R
 import com.callscreen.app.model.WhitelistedContact
-import com.callscreen.app.repository.ScreeningRepository
 import com.callscreen.app.util.ScreenLog
 import dagger.android.support.AndroidSupportInjection
+import io.realm.Realm
 import io.realm.RealmResults
-import javax.inject.Inject
+import io.realm.Sort
 
 class WhitelistedContactsFragment : Fragment() {
 
-    @Inject lateinit var screeningRepository: ScreeningRepository
-
+    private var realm: Realm? = null
     private var contacts: RealmResults<WhitelistedContact>? = null
     private var adapter: WhitelistedContactAdapter? = null
 
@@ -41,22 +40,31 @@ class WhitelistedContactsFragment : Fragment() {
         recyclerView.visibility = View.GONE
         emptyView.visibility = View.VISIBLE
 
-        if (!::screeningRepository.isInitialized) {
-            ScreenLog.w(TAG, "screeningRepository not initialized")
+        // Fragment owns its Realm instance — prevents GC from closing it
+        // while async RealmResults are still live
+        val realmInstance = try {
+            Realm.getDefaultInstance()
+        } catch (e: Exception) {
+            ScreenLog.e(TAG, "Failed to open Realm", e)
             return view
         }
+        realm = realmInstance
 
         recyclerView.layoutManager = LinearLayoutManager(context)
         adapter = WhitelistedContactAdapter()
         recyclerView.adapter = adapter
 
-        contacts = screeningRepository.getWhitelistedContacts()
-        ScreenLog.d(TAG, "Realm query created, adding change listener")
+        contacts = realmInstance
+            .where(WhitelistedContact::class.java)
+            .sort("whitelistedAt", Sort.DESCENDING)
+            .findAllAsync()
+
+        ScreenLog.d(TAG, "Realm query created on fragment-owned instance, adding change listener")
         contacts?.addChangeListener { results ->
             ScreenLog.d(TAG, "Change listener: ${results.size} results, loaded=${results.isLoaded}, valid=${results.isValid}")
             if (results.isLoaded && results.isNotEmpty()) {
                 try {
-                    val copied = results.realm.copyFromRealm(results)
+                    val copied = realmInstance.copyFromRealm(results)
                     ScreenLog.d(TAG, "Copied ${copied.size} items from Realm")
                     copied.forEachIndexed { i, c ->
                         ScreenLog.d(TAG, "  [$i] phone=${c.phoneNumber} source=${c.source}")
@@ -82,6 +90,10 @@ class WhitelistedContactsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         contacts?.removeAllChangeListeners()
+        contacts = null
+        realm?.close()
+        realm = null
+        ScreenLog.d(TAG, "Realm closed")
     }
 
     companion object {

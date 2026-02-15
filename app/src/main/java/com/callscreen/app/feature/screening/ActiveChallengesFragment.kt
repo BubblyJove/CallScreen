@@ -10,16 +10,15 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.callscreen.app.R
 import com.callscreen.app.model.ChallengeState
-import com.callscreen.app.repository.ScreeningRepository
 import com.callscreen.app.util.ScreenLog
 import dagger.android.support.AndroidSupportInjection
+import io.realm.Realm
 import io.realm.RealmResults
-import javax.inject.Inject
+import io.realm.Sort
 
 class ActiveChallengesFragment : Fragment() {
 
-    @Inject lateinit var screeningRepository: ScreeningRepository
-
+    private var realm: Realm? = null
     private var challenges: RealmResults<ChallengeState>? = null
     private var adapter: ChallengeAdapter? = null
 
@@ -43,22 +42,33 @@ class ActiveChallengesFragment : Fragment() {
         emptyView.visibility = View.VISIBLE
         emptyView.text = getString(R.string.screening_no_challenges)
 
-        if (!::screeningRepository.isInitialized) {
-            ScreenLog.w(TAG, "screeningRepository not initialized, returning empty view")
+        // Fragment owns its Realm instance — prevents GC from closing it
+        // while async RealmResults are still live
+        val realmInstance = try {
+            Realm.getDefaultInstance()
+        } catch (e: Exception) {
+            ScreenLog.e(TAG, "Failed to open Realm", e)
             return view
         }
+        realm = realmInstance
 
         recyclerView.layoutManager = LinearLayoutManager(context)
         adapter = ChallengeAdapter()
         recyclerView.adapter = adapter
 
-        challenges = screeningRepository.getActiveChallenges()
-        ScreenLog.d(TAG, "Realm query created, adding change listener")
+        val now = System.currentTimeMillis()
+        challenges = realmInstance
+            .where(ChallengeState::class.java)
+            .greaterThan("expiresAt", now)
+            .sort("createdAt", Sort.DESCENDING)
+            .findAllAsync()
+
+        ScreenLog.d(TAG, "Realm query created on fragment-owned instance (expiresAt > $now), adding change listener")
         challenges?.addChangeListener { results ->
             ScreenLog.d(TAG, "Change listener: ${results.size} results, loaded=${results.isLoaded}, valid=${results.isValid}")
             if (results.isLoaded && results.isNotEmpty()) {
                 try {
-                    val copied = results.realm.copyFromRealm(results)
+                    val copied = realmInstance.copyFromRealm(results)
                     ScreenLog.d(TAG, "Copied ${copied.size} items from Realm")
                     copied.forEachIndexed { i, c ->
                         ScreenLog.d(TAG, "  [$i] phone=${c.phoneNumber} type=${c.type} question='${c.challengeQuestion.take(40)}'")
@@ -84,6 +94,10 @@ class ActiveChallengesFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         challenges?.removeAllChangeListeners()
+        challenges = null
+        realm?.close()
+        realm = null
+        ScreenLog.d(TAG, "Realm closed")
     }
 
     companion object {

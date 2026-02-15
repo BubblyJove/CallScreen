@@ -10,16 +10,15 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.callscreen.app.R
 import com.callscreen.app.model.PendingScreenedMessage
-import com.callscreen.app.repository.ScreeningRepository
 import com.callscreen.app.util.ScreenLog
 import dagger.android.support.AndroidSupportInjection
+import io.realm.Realm
 import io.realm.RealmResults
-import javax.inject.Inject
+import io.realm.Sort
 
 class PendingMessagesFragment : Fragment() {
 
-    @Inject lateinit var screeningRepository: ScreeningRepository
-
+    private var realm: Realm? = null
     private var pendingMessages: RealmResults<PendingScreenedMessage>? = null
     private var adapter: PendingMessageAdapter? = null
 
@@ -41,22 +40,32 @@ class PendingMessagesFragment : Fragment() {
         recyclerView.visibility = View.GONE
         emptyView.visibility = View.VISIBLE
 
-        if (!::screeningRepository.isInitialized) {
-            ScreenLog.w(TAG, "screeningRepository not initialized")
+        // Fragment owns its Realm instance — prevents GC from closing it
+        // while async RealmResults are still live
+        val realmInstance = try {
+            Realm.getDefaultInstance()
+        } catch (e: Exception) {
+            ScreenLog.e(TAG, "Failed to open Realm", e)
             return view
         }
+        realm = realmInstance
 
         recyclerView.layoutManager = LinearLayoutManager(context)
         adapter = PendingMessageAdapter()
         recyclerView.adapter = adapter
 
-        pendingMessages = screeningRepository.getPendingMessages()
-        ScreenLog.d(TAG, "Realm query created, adding change listener")
+        pendingMessages = realmInstance
+            .where(PendingScreenedMessage::class.java)
+            .equalTo("statusString", PendingScreenedMessage.MessageStatus.HELD.name)
+            .sort("timestamp", Sort.DESCENDING)
+            .findAllAsync()
+
+        ScreenLog.d(TAG, "Realm query created on fragment-owned instance, adding change listener")
         pendingMessages?.addChangeListener { results ->
             ScreenLog.d(TAG, "Change listener: ${results.size} results, loaded=${results.isLoaded}, valid=${results.isValid}")
             if (results.isLoaded && results.isNotEmpty()) {
                 try {
-                    val copied = results.realm.copyFromRealm(results)
+                    val copied = realmInstance.copyFromRealm(results)
                     ScreenLog.d(TAG, "Copied ${copied.size} items from Realm")
                     copied.forEachIndexed { i, msg ->
                         ScreenLog.d(TAG, "  [$i] phone=${msg.phoneNumber} body='${msg.body.take(30)}' status=${msg.status}")
@@ -82,6 +91,10 @@ class PendingMessagesFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         pendingMessages?.removeAllChangeListeners()
+        pendingMessages = null
+        realm?.close()
+        realm = null
+        ScreenLog.d(TAG, "Realm closed")
     }
 
     companion object {

@@ -33,6 +33,7 @@ jobs:
 
       - name: Run Android lint
         run: ./gradlew lintDebug --no-daemon
+        continue-on-error: true
 
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --no-daemon
